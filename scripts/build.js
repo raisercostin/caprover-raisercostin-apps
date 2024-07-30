@@ -70,7 +70,7 @@ async function makeAppList(appFilenames) {
     appList: properAppFiles,
     appDetails,
   };
-  
+
 }
 
 /**
@@ -97,8 +97,10 @@ async function buildDist() {
     };
 
     await fs.outputJson(path.join(V4_FOLDER, 'list'), list);
-    await fs.copy(path.join(PUBLIC_FOLDER, 'CNAME'), path.join(DIST_FOLDER, 'CNAME'));
-    await fs.copy(path.join(PUBLIC_FOLDER, 'logo-transparent.png'), path.join(DIST_FOLDER, 'logo-transparent.png'));
+    if (await fs.pathExists(path.join(PUBLIC_FOLDER, 'CNAME')))
+      await fs.copy(path.join(PUBLIC_FOLDER, 'CNAME'), path.join(DIST_FOLDER, 'CNAME'));
+    if (await fs.pathExists(path.join(PUBLIC_FOLDER, 'logo-transparent.png')))
+      await fs.copy(path.join(PUBLIC_FOLDER, 'logo-transparent.png'), path.join(DIST_FOLDER, 'logo-transparent.png'));
     await createIndexHtml(allAppsList.appDetails);
   } catch (err) {
     console.error(err);
@@ -119,6 +121,9 @@ async function createIndexHtml(appList) {
       <body class="bg-gradient-to-r from-indigo-950 via-purple-950 to-indigo-950 min-h-screen flex items-center justify-center">
         <div class="container mx-auto px-4 py-8">
         <div class="text-center mb-12">
+          <h1 class="text-4xl font-bold text-white">Available Apps</h1>
+          <img src="logo-transparent.png" alt=""
+            class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12 text-white">
           <img src="logo-transparent.png" alt="Logo" class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12">
         </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
