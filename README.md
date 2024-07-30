@@ -13,12 +13,12 @@ For a complete list of available one-click apps, please visit the [repository](h
 
 Feel free to explore, contribute, and enhance your CapRover experience with these one-click apps! 🚢✨
 
-## Other repos:
-
-- <https://github.com/caproverhub/caprover-one-click-apps> - Inspired initial version of this repo. Thanks.
+## Other repos
 - <https://github.com/caprover/one-click-apps> original apps - With a lot of [app sugestions](https://github.com/caprover/one-click-apps/issues).
-- <https://github.com/uhlhosting/caprover-one-click-apps>
-- <https://github.com/Jordan-Hall/caprover-one-click-apps>
+- <https://github.com/caproverhub/caprover-one-click-apps> - Inspired initial version of this repo. Thanks.
+- imported
+  - [x] <https://github.com/uhlhosting/caprover-one-click-apps>
+  - [x] <https://github.com/Jordan-Hall/caprover-one-click-apps>
 
 ## Host your own repository
 
