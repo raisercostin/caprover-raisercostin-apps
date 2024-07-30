@@ -13,6 +13,13 @@ For a complete list of available one-click apps, please visit the [repository](h
 
 Feel free to explore, contribute, and enhance your CapRover experience with these one-click apps! 🚢✨
 
+## Other repos:
+
+- <https://github.com/caproverhub/caprover-one-click-apps> - Inspired initial version of this repo. Thanks.
+- <https://github.com/caprover/one-click-apps> original apps - With a lot of [app sugestions](https://github.com/caprover/one-click-apps/issues).
+- <https://github.com/uhlhosting/caprover-one-click-apps>
+- <https://github.com/Jordan-Hall/caprover-one-click-apps>
+
 ## Host your own repository
 
 ### 1) GithubRaw Dist Repo
@@ -34,11 +41,12 @@ See [dist/](dist/) for content
 
 ### 2) Caprover Hosted Repo
 
-**Repository app** https://caprover-raisercostin-apps.cap.namekis.com/
+**Repository app** https://caprover-apps.namekis.com/
 
-- Create a caprover app, mine is `caprover-raisercostin-apps`
+- Create a caprover app, mine is `caprover-apps` & DNS or the internal one https://caprover-apps.cap.namekis.com/
 - Deploy a caprover app with method 3: Deploy from Github/Bitbucket/Gitlab
   - This will build via [Dockerfile](Dockerfile) and create a image with the repository
+- Enable https since the images will be retrieved from your server and if not secure will not be displayed in chrome (not mixed with https)
 
 ### 3) GithubPages Repo
 
