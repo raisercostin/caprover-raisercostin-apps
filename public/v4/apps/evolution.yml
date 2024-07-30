@@ -1,0 +1,553 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        restart: on-failure
+        image: davidsongomes/evolution-api:$$cap_evolution_version
+        volumes:
+            - $$cap_appname-instances:/evolution/instances
+            - $$cap_appname-store:/evolution/store
+        depends_on:
+            - $$cap_appname-redis
+            - $$cap_appname-rabbitmq
+            - $$cap_appname-mongodb
+            - $$cap_appname-mongo-express
+        command: ['node', './dist/src/main.js']
+        caproverExtra:
+            containerHttpPort: '8080'
+        networks:
+            - evolution-net
+        environment:
+            SERVER_URL: https://$$cap_appname.$$cap_root_domain
+            CORS_ORIGIN: $$cap_CORS_ORIGIN
+            CORS_METHODS: $$cap_CORS_METHODS
+            CORS_CREDENTIALS: $$cap_CORS_CREDENTIALS
+            LOG_LEVEL: $$cap_LOG_LEVEL
+            LOG_COLOR: $$cap_LOG_COLOR
+            LOG_BAILEYS: $$cap_LOG_BAILEYS
+            DEL_INSTANCE: $$cap_DEL_INSTANCE
+            STORE_MESSAGES: $$cap_STORE_MESSAGES
+            STORE_MESSAGE_UP: $$cap_STORE_MESSAGE_UP
+            STORE_CONTACTS: $$cap_STORE_CONTACTS
+            STORE_CHATS: $$cap_STORE_CHATS
+            CLEAN_STORE_CLEANING_INTERVAL: $$cap_CLEAN_STORE_CLEANING_INTERVAL
+            CLEAN_STORE_MESSAGES: $$cap_CLEAN_STORE_MESSAGES
+            CLEAN_STORE_MESSAGE_UP: $$cap_CLEAN_STORE_MESSAGE_UP
+            CLEAN_STORE_CONTACTS: $$cap_CLEAN_STORE_CONTACTS
+            CLEAN_STORE_CHATS: $$cap_CLEAN_STORE_CHATS
+            DATABASE_ENABLED: $$cap_DATABASE_ENABLED
+            DATABASE_CONNECTION_URI: mongodb://root:root@srv-captain--evolution-mongodb:27017/?authSource=admin&readPreference=primary&ssl=false&directConnection=true
+            DATABASE_CONNECTION_DB_PREFIX_NAME: $$cap_DATABASE_CONNECTION_DB_PREFIX_NAME
+            DATABASE_SAVE_DATA_INSTANCE: $$cap_DATABASE_SAVE_DATA_INSTANCE
+            DATABASE_SAVE_DATA_NEW_MESSAGE: $$cap_DATABASE_SAVE_DATA_NEW_MESSAGE
+            DATABASE_SAVE_MESSAGE_UPDATE: $$cap_DATABASE_SAVE_MESSAGE_UPDATE
+            DATABASE_SAVE_DATA_CONTACTS: $$cap_DATABASE_SAVE_DATA_CONTACTS
+            DATABASE_SAVE_DATA_CHATS: $$cap_DATABASE_SAVE_DATA_CHATS
+            REDIS_ENABLED: $$cap_REDIS_ENABLED
+            REDIS_URI: redis://srv-captain--$$cap_appname-redis:6379
+            REDIS_PREFIX_KEY: $$cap_REDIS_PREFIX_KEY
+            RABBITMQ_ENABLED: $$cap_RABBITMQ_ENABLED
+            RABBITMQ_URI: amqp://guest:guest@srv-captain--$$cap_appname-rabbitmq:5672
+            WEBSOCKET_ENABLED: $$cap_WEBSOCKET_ENABLED
+            WEBHOOK_GLOBAL_URL: $$cap_WEBHOOK_GLOBAL_URL
+            WEBHOOK_GLOBAL_ENABLED: $$cap_WEBHOOK_GLOBAL_ENABLED
+            WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: $$cap_WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS
+            WEBHOOK_EVENTS_APPLICATION_STARTUP: $$cap_WEBHOOK_EVENTS_APPLICATION_STARTUP
+            WEBHOOK_EVENTS_QRCODE_UPDATED: $$cap_WEBHOOK_EVENTS_QRCODE_UPDATED
+            WEBHOOK_EVENTS_MESSAGES_SET: $$cap_WEBHOOK_EVENTS_MESSAGES_SET
+            WEBHOOK_EVENTS_MESSAGES_UPSERT: $$cap_WEBHOOK_EVENTS_MESSAGES_UPSERT
+            WEBHOOK_EVENTS_MESSAGES_UPDATE: $$cap_WEBHOOK_EVENTS_MESSAGES_UPDATE
+            WEBHOOK_EVENTS_MESSAGES_DELETE: $$cap_WEBHOOK_EVENTS_MESSAGES_DELETE
+            WEBHOOK_EVENTS_SEND_MESSAGE: $$cap_WEBHOOK_EVENTS_SEND_MESSAGE
+            WEBHOOK_EVENTS_CONTACTS_SET: $$cap_WEBHOOK_EVENTS_CONTACTS_SET
+            WEBHOOK_EVENTS_CONTACTS_UPSERT: $$cap_WEBHOOK_EVENTS_CONTACTS_UPSERT
+            WEBHOOK_EVENTS_CONTACTS_UPDATE: $$cap_WEBHOOK_EVENTS_CONTACTS_UPDATE
+            WEBHOOK_EVENTS_PRESENCE_UPDATE: $$cap_WEBHOOK_EVENTS_PRESENCE_UPDATE
+            WEBHOOK_EVENTS_CHATS_SET: $$cap_WEBHOOK_EVENTS_CHATS_SET
+            WEBHOOK_EVENTS_CHATS_UPSERT: $$cap_WEBHOOK_EVENTS_CHATS_UPSERT
+            WEBHOOK_EVENTS_CHATS_UPDATE: $$cap_WEBHOOK_EVENTS_CHATS_UPDATE
+            WEBHOOK_EVENTS_CHATS_DELETE: $$cap_WEBHOOK_EVENTS_CHATS_DELETE
+            WEBHOOK_EVENTS_GROUPS_UPSERT: $$cap_WEBHOOK_EVENTS_GROUPS_UPSERT
+            WEBHOOK_EVENTS_GROUPS_UPDATE: $$cap_WEBHOOK_EVENTS_GROUPS_UPDATE
+            WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE: $$cap_WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE
+            WEBHOOK_EVENTS_CONNECTION_UPDATE: $$cap_WEBHOOK_EVENTS_CONNECTION_UPDATE
+            WEBHOOK_EVENTS_CALL: $$cap_WEBHOOK_EVENTS_CALL
+            WEBHOOK_EVENTS_NEW_JWT_TOKEN: $$cap_WEBHOOK_EVENTS_NEW_JWT_TOKEN
+            CONFIG_SESSION_PHONE_CLIENT: $$cap_CONFIG_SESSION_PHONE_CLIENT
+            CONFIG_SESSION_PHONE_NAME: $$cap_CONFIG_SESSION_PHONE_NAME
+            QRCODE_LIMIT: $$cap_QRCODE_LIMIT
+            QRCODE_COLOR: $$cap_QRCODE_COLOR
+            AUTHENTICATION_TYPE: $$cap_AUTHENTICATION_TYPE
+            AUTHENTICATION_API_KEY: $$cap_AUTHENTICATION_API_KEY
+            AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: $$cap_AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES
+            AUTHENTICATION_JWT_EXPIRIN_IN: $$cap_AUTHENTICATION_JWT_EXPIRIN_IN
+            AUTHENTICATION_JWT_SECRET: $$cap_AUTHENTICATION_JWT_SECRET
+            AUTHENTICATION_INSTANCE_MODE: $$cap_AUTHENTICATION_INSTANCE_MODE
+            AUTHENTICATION_INSTANCE_NAME: $$cap_AUTHENTICATION_INSTANCE_NAME
+            AUTHENTICATION_INSTANCE_WEBHOOK_URL: $$cap_AUTHENTICATION_INSTANCE_WEBHOOK_URL
+            AUTHENTICATION_INSTANCE_CHATWOOT_ACCOUNT_ID: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_ACCOUNT_ID
+            AUTHENTICATION_INSTANCE_CHATWOOT_TOKEN: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_TOKEN
+            AUTHENTICATION_INSTANCE_CHATWOOT_URL: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_URL
+
+    # Redis Cache
+    $$cap_appname-redis:
+        restart: on-failure
+        image: redis:$$cap_REDIS_VERSION
+        command: redis-server --appendonly yes
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            retries: 3
+            timeout: 5s
+        caproverExtra:
+            notExposeAsWebApp: true
+        volumes:
+            - $$cap_appname-redis:/data
+        networks:
+            - evolution-net
+    # RabbitMQ
+    $$cap_appname-rabbitmq:
+        restart: on-failure
+        image: rabbitmq:$$cap_RABBITMQ_VERSION
+        healthcheck:
+            test: ['CMD', 'rabbitmqctl', 'status']
+            retries: 3
+            timeout: 5s
+        caproverExtra:
+            notExposeAsWebApp: true
+        networks:
+            - evolution-net
+    # MongoDB
+    $$cap_appname-mongodb:
+        restart: on-failure
+        image: mongo:$$cap_MONGO_VERSION
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: root
+            PUID: 1000
+            PGID: 1000
+        caproverExtra:
+            containerHttpPort: 27017
+            notExposeAsWebApp: false
+        volumes:
+            - $$cap_appname-mongodb-data:/data/db
+            - $$cap_appname-mongodb-configdb:/data/configdb
+        networks:
+            - evolution-net
+    # Mongo-Express
+    $$cap_appname-mongo-express:
+        restart: on-failure
+        image: mongo-express:$$cap_MONGO_EXPRESS_VERSION
+        environment:
+            ME_CONFIG_BASICAUTH_USERNAME: root
+            ME_CONFIG_BASICAUTH_PASSWORD: root
+            ME_CONFIG_MONGODB_SERVER: srv-captain--$$cap_appname-mongodb
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: root
+            ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+            ME_CONFIG_OPTIONS_EDITORTHEME: ambiance
+        caproverExtra:
+            containerHttpPort: '8080'
+        depends_on:
+            - $$cap_appname-mongodb
+        networks:
+            - evolution-net
+caproverOneClickApp:
+    displayName: Evolution API
+    isOfficial: true
+    description: Evolution API Service
+    documentation: https://doc.evolution-api.com/help-center/articles/1/7/66/docker-installation
+    instructions:
+        start: |-
+            Initial setup instructions for Evolution API.
+        end: |-
+            Evolution API is now set up. Your service is available at https://$$cap_appname.$$cap_root_domain .
+    variables:
+        - id: $$cap_evolution_version
+          label: Evolution API Version
+          description: Check out their Docker page for the valid tags https://hub.docker.com/r/davidsongomes/evolution-api/tags
+          defaultValue: latest
+        - id: $$cap_SERVER_URL
+          label: Server URL
+          description: The URL of your Evolution API server.
+          validRegex: /.+/
+          defaultValue: $$cap_appname.$$cap_root_domain
+        - id: $$cap_CORS_ORIGIN
+          label: CORS Origin
+          description: The origin of your Evolution API server.
+          validRegex: /.+/
+          defaultValue: '*'
+        - id: $$cap_CORS_METHODS
+          label: CORS Methods
+          description: The methods of your Evolution API server.
+          validRegex: /.+/
+          defaultValue: GET,POST,PUT,DELETE,HEAD,OPTIONS
+        - id: $$cap_CORS_CREDENTIALS
+          label: CORS Credentials
+          description: The credentials of your Evolution API server.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_LOG_LEVEL
+          label: Log Level
+          description: The log level of your Evolution API server.
+          validRegex: /.+/
+          defaultValue: 'ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS'
+        - id: $$cap_LOG_COLOR
+          label: Log Color
+          description: The log color of your Evolution API server.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_LOG_BAILEYS
+          label: Log Baileys
+          description: Log Baileys - "fatal" | "error" | "warn" | "info" | "debug" | "trace"
+          validRegex: /^fatal|error|warn|info|debug|trace$/
+          defaultValue: 'info'
+        - id: $$cap_DEL_INSTANCE
+          label: Delete Instance After Disconnection
+          description: |-
+              # Determine how long the instance should be deleted from memory in case of no connection.
+              # Default time: 5 minutes
+              # If you don't even want an expiration, enter the value false
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        # Temporary data storage
+        - id: $$cap_STORE_MESSAGES
+          label: Store Messages
+          description: Store messages in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_STORE_MESSAGE_UP
+          label: Store Messages Up
+          description: Store messages in the store up to the limit.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_STORE_CONTACTS
+          label: Store Contacts
+          description: Store contacts in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_STORE_CHATS
+          label: Store Chats
+          description: Store chats in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        # Set Store Interval in Seconds (7200 = 2h)
+        - id: $$cap_CLEAN_STORE_CLEANING_INTERVAL
+          label: Clean Store Cleaning Interval (Seconds)
+          description: The interval in seconds to clean the store.
+          validRegex: /^\d+$/
+          defaultValue: 7200
+        - id: $$cap_CLEAN_STORE_MESSAGES
+          label: Clean Store Messages
+          description: Clean messages in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_CLEAN_STORE_MESSAGE_UP
+          label: Clean Store Messages Up
+          description: Clean messages in the store up to the limit.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_CLEAN_STORE_CONTACTS
+          label: Clean Store Contacts
+          description: Clean contacts in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_CLEAN_STORE_CHATS
+          label: Clean Store Chats
+          description: Clean chats in the store.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_DATABASE_ENABLED
+          label: Enable MongoDB
+          description: If you have a MongoDB instance running, you can enable it
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_CONNECTION_DB_PREFIX_NAME'
+          label: MongoDB Connection DB Prefix Name
+          defaultValue: 'evolution'
+        - id: $$cap_MONGO_VERSION
+          label: MongoDB Version
+          defaultValue: 'latest'
+          description: Checkout their docker page for the valid tags https://hub.docker.com/_/mongo/tags
+        - id: $$cap_MONGO_EXPRESS_VERSION
+          label: Mongo-Express Version
+          defaultValue: 'latest'
+          description: Checkout their docker page for the valid tags https://hub.docker.com/_/mongo-express/tags
+        - id: $$cap_DATABASE_SAVE_DATA_INSTANCE
+          label: Save Data Instance in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_DATA_MESSAGE
+          label: Save Data Message in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_DATA_MESSAGE_UPDATE
+          label: Save Data Message Update in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_DATA_NEW_MESSAGE
+          label: Save Data New Message in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_MESSAGE_UPDATE
+          label: Save Data Message Update in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_DATA_CONTACTS
+          label: Save Data User Group Member in Database
+          defaultValue: 'false'
+        - id: $$cap_DATABASE_SAVE_DATA_CHATS
+          label: Save Data Chat in Database
+          defaultValue: 'false'
+        - id: $$cap_REDIS_ENABLED
+          label: Enable Redis
+          description: Enable Redis to cache data.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_REDIS_PREFIX_KEY
+          label: Redis Prefix Key
+          description: Redis prefix key.
+          validRegex: /.+/
+          defaultValue: evolution
+        - id: $$cap_REDIS_VERSION
+          label: Cache | Version
+          description: Redis version. Check out their valid tags at https://hub.docker.com/_/redis/tags
+          defaultValue: latest
+          validRegex: /.{1,}/
+        - id: $$cap_RABBITMQ_ENABLED
+          label: Enable RabbitMQ
+          description: If you have a RabbitMQ instance running, you can enable it https://hub.docker.com/_/redis/tags
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_RABBITMQ_VERSION
+          label: RabbitMQ Version
+          description: RabbitMQ version. Check out their valid tags at https://hub.docker.com/_/redis/tags
+          defaultValue: 'latest'
+          validRegex: /.{1,}/
+        - id: $$cap_WEBSOCKET_ENABLED
+          label: Enable Websocket
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_GLOBAL_URL
+          label: Global Webhook URL
+          description: Global Webhook URL.
+          validRegex: /.+/
+          defaultValue: '$$cap_appname.$$cap_root_domain'
+        - id: $$cap_WEBHOOK_GLOBAL_ENABLED
+          label: Enable Webhook Global
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS
+          label: Enable Webhook Event for Global Webhook
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_APPLICATION_STARTUP
+          label: Enable Webhook Event for Application Startup
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_QRCODE_UPDATED
+          label: Enable Webhook Event for QRCode Updated
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_MESSAGES_SET
+          label: Enable Webhook Event for Messages Set
+          description: This is the type of authentication that will be used to access your application.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events
+        - id: $$cap_WEBHOOK_EVENTS_MESSAGES_UPSERT
+          label: Webhook Event for Message Upsert
+          description: Enable or disable the webhook event for message upserts.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_MESSAGES_UPDATE
+          label: Webhook Event for Message Update
+          description: Enable or disable the webhook event for message updates.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        # Webhook Events for Messages
+        - id: $$cap_WEBHOOK_EVENTS_MESSAGES_DELETE
+          label: Webhook Event for Message Deletion
+          description: Enable or disable the webhook event for message deletions.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_SEND_MESSAGE
+          label: Webhook Event for Sending Messages
+          description: Enable or disable the webhook event for sending messages.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+
+        # Webhook Events for Contacts
+        - id: $$cap_WEBHOOK_EVENTS_CONTACTS_SET
+          label: Webhook Event for Contact Set
+          description: Enable or disable the webhook event for setting contacts.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_CONTACTS_UPSERT
+          label: Webhook Event for Contact Upsert
+          description: Enable or disable the webhook event for upserting contacts.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_WEBHOOK_EVENTS_CONTACTS_UPDATE
+          label: Webhook Event for Contact Update
+          description: Enable or disable the webhook event for updating contacts.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        # Webhook Events for Presence Updates
+        - id: $$cap_WEBHOOK_EVENTS_PRESENCE_UPDATE
+          label: Webhook Event for Presence Updates
+          description: Enable or disable the webhook event for presence updates.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events for Chats
+        - id: $$cap_WEBHOOK_EVENTS_CHATS_SET
+          label: Webhook Event for Chat Set
+          description: Enable or disable the webhook event for setting chats.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_CHATS_UPSERT
+          label: Webhook Event for Chat Upsert
+          description: Enable or disable the webhook event for upserting chats.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_CHATS_UPDATE
+          label: Webhook Event for Chat Update
+          description: Enable or disable the webhook event for updating chats.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_CHATS_DELETE
+          label: Webhook Event for Chat Deletion
+          description: Enable or disable the webhook event for deleting chats.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events for Groups
+        - id: $$cap_WEBHOOK_EVENTS_GROUPS_UPSERT
+          label: Webhook Event for Group Upsert
+          description: Enable or disable the webhook event for upserting groups.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_GROUPS_UPDATE
+          label: Webhook Event for Group Update
+          description: Enable or disable the webhook event for updating groups.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events for Group Participants
+        - id: $$cap_WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE
+          label: Webhook Event for Group Participant Update
+          description: Enable or disable the webhook event for updating group participants.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events for Connection Updates
+        - id: $$cap_WEBHOOK_EVENTS_CONNECTION_UPDATE
+          label: Webhook Event for Connection Updates
+          description: Enable or disable the webhook event for connection updates.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+
+        # Webhook Events for Calls
+        - id: $$cap_WEBHOOK_EVENTS_CALL
+          label: Webhook Event for Calls
+          description: Enable or disable the webhook event for calls.
+          validRegex: /^(true|false)$/
+          defaultValue: 'true'
+        - id: $$cap_WEBHOOK_EVENTS_NEW_JWT_TOKEN
+          label: Webhook Event for New JWT Token
+          description: Enable or disable the webhook event for new JWT token.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_CONFIG_SESSION_PHONE_CLIENT
+          label: Phone Client Session Config
+          description: The name that will be displayed on the smartphone connection.
+          validRegex: /^.{1,100}$/
+          defaultValue: 'EvolutionAPI'
+        - id: $$cap_CONFIG_SESSION_PHONE_NAME
+          label: Phone Name Session Config
+          description: Browser Name for the phone session.
+          validRegex: /^.{1,100}$/
+          defaultValue: 'chrome'
+
+        # QR Code Config
+        - id: $$cap_QRCODE_LIMIT
+          label: QR Code Limit
+          description: Set the display limit for QR codes.
+          validRegex: /^\d+$/
+          defaultValue: '30'
+        - id: $$cap_QRCODE_COLOR
+          label: QR Code Color
+          description: Set the color for QR codes.
+          validRegex: /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+          defaultValue: '#198754'
+
+        # Authentication
+        - id: $$cap_AUTHENTICATION_TYPE
+          label: Authentication Type
+          description: The type of authentication that will be used to access your application.
+          validRegex: /^(apikey|jwt)$/
+          defaultValue: 'apikey'
+        - id: $$cap_AUTHENTICATION_API_KEY
+          label: Authentication API Key
+          description: The API key used for authentication.
+          validRegex: /^.{1,255}$/
+          defaultValue: 'Qf2FmXqhK886i11MdMlzl36rZTHPO4Nu'
+        - id: $$cap_AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES
+          label: Expose in Fetch Instances
+          description: Expose this instance in the fetch instances API call.
+          validRegex: /^(true|false)$/
+          defaultValue: 'false'
+        - id: $$cap_AUTHENTICATION_JWT_EXPIRIN_IN
+          label: JWT Expiry Time (seconds)
+          description: Set the JWT expiry time in seconds. Set to 0 for no expiry.
+          validRegex: /^\d+$/
+          defaultValue: '0'
+        - id: $$cap_AUTHENTICATION_JWT_SECRET
+          label: JWT Secret Key
+          description: The secret key for JWT authentication.
+          validRegex: /^.{1,255}$/
+          defaultValue: 'd2f14d9ed5a6a6ba4559bd9a4ab9c89d585661cc8d177e8ac65643ff6c636194'
+
+        # Authentication Instance Mode
+        - id: $$cap_AUTHENTICATION_INSTANCE_MODE
+          label: Authentication Instance Mode
+          description: Set the mode of the authentication instance. Typically 'server' or 'client'.
+          validRegex: /^(server|client)$/
+          defaultValue: 'server'
+
+        # Authentication Instance Name
+        - id: $$cap_AUTHENTICATION_INSTANCE_NAME
+          label: Authentication Instance Name
+          description: The name of the authentication instance.
+          validRegex: /.{1,255}$/
+          defaultValue: 'evolution'
+
+        # Authentication Instance Webhook URL
+        - id: $$cap_AUTHENTICATION_INSTANCE_WEBHOOK_URL
+          label: Authentication Instance Webhook URL
+          description: The webhook URL for the authentication instance.
+          validRegex: /^https?:\/\/[^\s]+/
+          defaultValue: 'https://evolution.uhl.cloud'
+
+        # Authentication Instance Chatwoot Account ID
+        - id: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_ACCOUNT_ID
+          label: Chatwoot Account ID
+          description: The Chatwoot account ID for the authentication instance.
+          validRegex: /^\d+$/
+          defaultValue: '1'
+
+        # Authentication Instance Chatwoot Token
+        - id: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_TOKEN
+          label: Chatwoot Token
+          description: The Chatwoot token for the authentication instance.
+          validRegex: /.{1,255}$/
+          defaultValue: '123456'
+
+        # Authentication Instance Chatwoot URL
+        - id: $$cap_AUTHENTICATION_INSTANCE_CHATWOOT_URL
+          label: Chatwoot URL
+          description: The URL for Chatwoot for the authentication instance.
+          validRegex: /^https?:\/\/[^\s]+/
+          #  defaultValue: 'https://chat-web.uhl.cloud'
+          defaultValue: '$$cap_appname.$$cap_root_domain'

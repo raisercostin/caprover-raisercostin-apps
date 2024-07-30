@@ -1,0 +1,128 @@
+captainVersion: 4
+services:
+    $$cap_appname-db:
+        volumes:
+            - $$cap_appname-db-data:/var/lib/mysql
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+            MYSQL_DATABASE: $$cap_mysql_database
+            MYSQL_USER: $$cap_mysql_user
+            MYSQL_PASSWORD: $$cap_mysql_password
+        restart: always
+        caproverExtra:
+            dockerfileLines:
+                - FROM mariadb:latest
+                - CMD ["mysqld", "--default-storage-engine innodb"]
+            notExposeAsWebApp: true
+
+    $$cap_appname-cache:
+        image: redis:latest
+        restart: always
+
+    $$cap_appname:
+        image: eloufirhatim/helper:$$cap_helper_version
+        volumes:
+            - /etc/localtime:/etc/localtime
+        environment:
+            APP_DEBUG: 'false'
+            APP_ENV: production
+            APP_NAME: 'UHL PM'
+            APP_URL: $$cap_app_url
+            BROADCAST_DRIVER: pusher
+            CACHE_DRIVER: file
+            DB_CONNECTION: mysql
+            DB_DATABASE: helper
+            DB_HOST: srv-captain--$$cap_appname-db
+            DB_PORT: '3306'
+            DB_USERNAME: helper
+            DB_PASSWORD: $$cap_db_password
+            FILESYSTEM_DISK: local
+            LOG_CHANNEL: daily
+            LOG_DEPRECATIONS_CHANNEL: 'null'
+            LOG_LEVEL: debug
+            MAIL_MAILER: smtp
+            MAIL_HOST: $$cap_mail_host
+            MAIL_PORT: $$cap_mail_port
+            MAIL_USERNAME: $$cap_mail_username
+            MAIL_PASSWORD: $$cap_mail_password
+            MAIL_ENCRYPTION: $$cap_mail_encryption
+            MAIL_FROM_ADDRESS: $$cap_mail_from_address
+            MAIL_FROM_NAME: $$cap_mail_from_name
+            QUEUE_CONNECTION: database
+            SESSION_DRIVER: file
+            SESSION_LIFETIME: '120'
+            REDIS_HOST: srv-captain--$$cap_appname-cache
+            REDIS_PORT: 6379
+        depends_on:
+            - $$cap_appname-db
+        restart: always
+        caproverExtra:
+            containerHttpPort: '8000'
+            notExposeAsWebApp: false
+            websocketSupport: 'true'
+
+caproverOneClickApp:
+    variables:
+        - id: $$cap_db_password
+          label: Database Password
+          defaultValue: helper
+          description: The password for the database user 'helper'. Change this for security reasons.
+          validRegex: /^.{1,}$/
+
+        - id: $$cap_helper_version
+          label: Helper Application Version
+          defaultValue: latest
+          description: The Docker image version of the helper application. Refer to Docker Hub for valid tags.
+          validRegex: /^([^\s^\/])+$/
+
+        - id: $$cap_mail_username
+          label: Mail Username
+          defaultValue: uhl-hosting/uhl-sites
+          description: Username for the SMTP mail service.
+
+        - id: $$cap_mail_password
+          label: Mail Password
+          defaultValue:
+          description: Password for the SMTP mail service. Highly recommended to change this from the default for security reasons.
+          validRegex: /^.{1,}$/
+
+        # Adding new variables based on the provided environment configuration
+        - id: $$cap_app_url
+          label: Application URL
+          defaultValue: https://pm.uhl.cloud
+          description: The URL where your application will be accessible.
+
+        - id: $$cap_mail_host
+          label: Mail Host
+          defaultValue: post.uhlhosting.ch
+          description: Hostname for the SMTP mail service.
+
+        - id: $$cap_mail_from_address
+          label: Mail From Address
+          defaultValue: pm@uhl.cloud
+          description: The email address used in the "From" field in emails sent by your application.
+
+        - id: $$cap_mail_from_name
+          label: Mail From Name
+          defaultValue: UHL PM
+          description: The name used in the "From" field in emails sent by your application.
+
+        - id: $$cap_mail_port
+          label: Mail Port
+          defaultValue: 25
+          description: Port for the SMTP mail service. Usually 25, 465 (SSL), or 587 (TLS).
+
+        - id: $$cap_mail_encryption
+          label: Mail Encryption
+          defaultValue: tls
+          description: Encryption method for the SMTP mail service. Typically 'tls' or 'ssl', or leave blank for none.
+
+    instructions:
+        start: >-
+            This template sets up a MySQL database and a custom helper application. Ensure you have the correct database and mail configuration before proceeding.
+        end: >-
+            Your applications are now deployed. Please check the application dashboard for more details.
+    displayName: Helper
+    isOfficial: true
+    description: This template deploys a custom application alongside a MySQL database, with integrated mail support.
+    documentation: Please refer to the official Docker images for MySQL and your application for further configuration options and best practices.

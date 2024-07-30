@@ -1,0 +1,77 @@
+captainVersion: 4
+services:
+    $$cap_appname-db:
+        volumes:
+            - $$cap_appname-db-data:/var/lib/mysql
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+            MYSQL_DATABASE: $$cap_mysql_database
+            MYSQL_USER: $$cap_mysql_user
+            MYSQL_PASSWORD: $$cap_mysql_password
+        restart: always
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM mariadb:$$cap_mariadb_version
+
+    $$cap_appname-redis:
+        image: redis:$$cap_redis_version
+        restart: always
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+    $$cap_appname:
+        depends_on:
+            - $$cap_appname-db
+            - $$cap_appname-redis
+        ports:
+            - 25:25
+            - 8000:8000
+        volumes:
+            - $$cap_appname-data:/data
+        environment:
+            DB_HOST: srv-captain--$$cap_appname-db
+            DB_DATABASE: $$cap_mysql_database
+            DB_USERNAME: $$cap_mysql_user
+            DB_PASSWORD: $$cap_mysql_password
+            REDIS_HOST: srv-captain--$$cap_appname-redis
+        restart: always
+        caproverExtra:
+            containerHttpPort: '8000'
+            dockerfileLines:
+                - FROM anonaddy/anonaddy:$$cap_anonaddy_version
+
+caproverOneClickApp:
+    variables:
+        - id: $$cap_mysql_database
+          label: 🗃️ MySQL Database
+          defaultValue: 'addy_db'
+        - id: $$cap_mysql_user
+          label: 👤 MySQL User
+          defaultValue: 'addy_user'
+        - id: $$cap_mysql_password
+          label: 🔒 MySQL Password
+          defaultValue: $$cap_gen_random_hex(16)
+        - id: $$cap_appname-data
+          label: 📂 App Data Volume
+          defaultValue: 'data'
+        - id: $$cap_appname-db-data
+          label: 💾 Database Data Volume
+          defaultValue: 'db-data'
+        - id: $$cap_anonaddy_version
+          label: 🛠️ AnonAddy Version
+          defaultValue: 'latest'
+        - id: $$cap_redis_version
+          label: 🛠️ Redis Version
+          defaultValue: 'latest'
+        - id: $$cap_mariadb_version
+          label: 🛠️ MariaDB Version
+          defaultValue: 'latest'
+
+    instructions:
+        start: '🚀 Addy is a tool for mail manipulation and routing.'
+        end: '✅ Addy has been successfully deployed and can be accessed at `http://$$cap_appname.$$cap_root_domain`.'
+
+    displayName: 'Addy'
+    description: '📌 A brief description of Addy and its functionalities.'
+    documentation: '📖 Link to Addy documentation.'

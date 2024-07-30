@@ -1,0 +1,49 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname-sonarqube:
+        image: sonarqube:latest
+        volumes:
+            - $$cap_appname-sonarqube-data:/opt/sonarqube/data
+            - $$cap_appname-sonarqube-extensions:/opt/sonarqube/extensions
+            - $$cap_appname-sonarqube-logs:/opt/sonarqube/logs
+        restart: always
+        environment:
+            SONAR_JDBC_URL: jdbc:postgresql://srv-captain--$$cap_appname-db:5432/sonar
+            SONAR_JDBC_USERNAME: sonar
+            SONAR_JDBC_PASSWORD: $$cap_sonar_jdbc_password
+        caproverExtra:
+            containerHttpPort: '9000'
+            websocketSupport: 'true'
+
+    $$cap_appname-db:
+        image: postgres:12
+        volumes:
+            - $$cap_appname-postgresql:/var/lib/postgresql
+            - $$cap_appname-postgresql-data:/var/lib/postgresql/data
+        restart: always
+        environment:
+            POSTGRES_USER: sonar
+            POSTGRES_PASSWORD: $$cap_sonar_db_password
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+caproverOneClickApp:
+    variables:
+        - id: $$cap_sonar_jdbc_password
+          label: SonarQube JDBC Password
+          description: Enter the JDBC password for SonarQube.
+          defaultValue: '$$cap_gen_random_hex(16)'
+
+        - id: $$cap_sonar_db_password
+          label: SonarQube Database Password
+          description: Enter the password for the SonarQube PostgreSQL database.
+          defaultValue: '$$cap_gen_random_hex(16)'
+
+    instructions:
+        start: SonarQube is an open-source platform for continuous inspection of code quality.
+        end: SonarQube has been deployed and is available at $$cap_appname.
+    displayName: SonarQube
+    isOfficial: true
+    description: SonarQube - Continuous Inspection of Code Quality
+    documentation: 'For more information, visit https://www.sonarqube.org/'

@@ -1,0 +1,59 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        image: searxng/searxng:$$cap_searxng_version
+        environment:
+            SEARXNG_BASE_URL: $$cap_base_url
+            INSTANCE_NAME: $$cap_instance_name
+        volumes:
+            - $$cap_appname-data:/etc/searxng
+        caproverExtra:
+            containerHttpPort: 8080
+
+    # $$cap_appname-caddy:
+    #     image: caddy:2-alpine
+    #     environment:
+    #         SEARXNG_HOSTNAME: $$cap_searxng_hostname
+    #         SEARXNG_TLS: $$cap_searxng_tls
+    #     volumes:
+    #         - $$cap_appname-caddy-data:/data
+    #         - $$cap_appname-caddy-config:/config
+    #     caproverExtra:
+    #         notExposeAsWebApp: true
+
+    $$cap_appname-redis:
+        image: redis:alpine
+        command: redis-server --save "" --appendonly "no"
+        volumes:
+            - $$cap_appname-redis-data:/var/lib/redis
+        caproverExtra:
+            notExposeAsWebApp: true
+
+caproverOneClickApp:
+    variables:
+        - id: $$cap_searxng_version
+          label: SearXNG Version
+          defaultValue: latest
+          description: Check their Docker page for valid tags
+          validRegex: /^([^\s^\/])+$/
+        - id: $$cap_base_url
+          label: SearXNG Base URL
+          defaultValue: https://$$cap_appname.$$cap_root_domain
+        # - id: $$cap_searxng_hostname
+        #   label: SearXNG Hostname
+        #   defaultValue: $$cap_appname.$$cap_root_domain
+        # - id: $$cap_searxng_tls
+        #   label: SearXNG TLS (Let's Encrypt Email)
+        #   defaultValue: cosmin@uhlhost.net
+
+    instructions:
+        start: |-
+            SearXNG is a metasearch engine. Users are neither tracked nor profiled.
+        end: |-
+            Aaaand you're done! 😄
+            Your service is available at http://$$cap_appname.$$cap_root_domain
+    displayName: SearXNG
+    isOfficial: true
+    description: Privacy-respecting, hackable metasearch engine
+    documentation: https://docs.searxng.org/admin/installation-docker.html

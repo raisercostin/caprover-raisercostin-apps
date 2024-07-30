@@ -1,0 +1,95 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        restart: on-failure
+        image: activepieces/activepieces:$$cap_activepieces_version
+        volumes:
+            - $$cap_appname-activepieces-data:/activepieces/.activepieces
+        ports:
+            - '8080:80'
+        environment:
+            AP_CLOUD_AUTH_ENABLED: 'false'
+            AP_ENCRYPTION_KEY: $$cap_ap_encryption_key
+            AP_ENGINE_EXECUTABLE_PATH: dist/packages/engine/main.js
+            AP_ENVIRONMENT: prod
+            AP_EXECUTION_MODE: UNSANDBOXED
+            AP_FRONTEND_URL: https://$$cap_appname.$$cap_root_domain
+            AP_JWT_SECRET: $$cap_ap_jwt_secret
+            AP_NODE_EXECUTABLE_PATH: /usr/local/bin/node
+            AP_NOTIFICATION_URL: https://$$cap_appname.$$cap_root_domain/api/v1/notifications
+            AP_POSTGRES_DATABASE: activepieces_db
+            AP_POSTGRES_HOST: srv-captain--$$cap_appname-postgres
+            AP_POSTGRES_PASSWORD: $$cap_ap_postgres_password
+            AP_POSTGRES_PORT: 5432
+            AP_POSTGRES_USERNAME: $$cap_ap_postgres_username
+            AP_REDIS_URL: redis://srv-captain--$$cap_appname-redis:6379
+            AP_SANDBOX_RUN_TIME_SECONDS: 600
+            AP_TELEMETRY_ENABLED: 'true'
+            AP_TEMPLATES_SOURCE_URL: 'https://cloud.activepieces.com/api/v1/flow-templates'
+            AP_TRIGGER_DEFAULT_POLL_INTERVAL: 5
+        depends_on:
+            - $$cap_appname-redis
+            - $$cap_appname-postgres
+    $$cap_appname-postgres:
+        restart: on-failure
+        image: 'postgres:$$cap_postgres_version'
+        volumes:
+            - $$cap_appname-postgres-data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_DB: $$cap_ap_postgres_database
+            POSTGRES_PASSWORD: $$cap_ap_postgres_password
+            POSTGRES_USER: $$cap_ap_postgres_username
+        caproverExtra:
+            notExposeAsWebApp: true
+    $$cap_appname-redis:
+        restart: on-failure
+        image: 'redis:$$cap_redis_version'
+        volumes:
+            - $$cap_appname-redis-data:/data
+        caproverExtra:
+            notExposeAsWebApp: true
+
+caproverOneClickApp:
+    displayName: ActivePieces
+    isOfficial: true # Set to true if this is an official one-click app
+    description: ActivePieces is a powerful platform for building and running workflow applications.
+    documentation: https://www.activepieces.com/docs/install/options/overview
+    instructions:
+        start: |-
+            This will install ActivePieces along with its dependencies. You'll be prompted for configuration details.
+        end: |-
+            ActivePieces has been installed. Your service is available at http://$$cap_appname.$$cap_root_domain .
+    variables:
+        - id: $$cap_activepieces_version
+          label: ActivePieces Version
+          defaultValue: 0.10.1
+          validRegex: /^\d+(\.\d+){0,2}$/
+        - id: $$cap_postgres_version
+          label: PostgreSQL Version
+          defaultValue: 16
+          validRegex: /^\d+(\.\d+)?$/
+        - id: $$cap_redis_version
+          label: Redis Version
+          defaultValue: 7.2.1
+          validRegex: /^\d+(\.\d+){0,2}$/
+        - id: $$cap_ap_encryption_key
+          label: AP Encryption Key (32 hex characters)
+          defaultValue: $$cap_gen_random_hex(32)
+          validRegex: /^[A-Fa-f0-9]{32}$/
+        - id: $$cap_ap_jwt_secret
+          label: AP JWT Secret
+          defaultValue: ''
+          validRegex: /^.*$/
+        - id: $$cap_ap_postgres_password
+          label: PostgreSQL Password
+          defaultValue: $$cap_gen_random_hex(16)
+          validRegex: /^.*$/
+        - id: $$cap_ap_postgres_database
+          label: PostgreSQL Database Name
+          defaultValue: activepieces_db
+          validRegex: /^[\w]+$/
+        - id: $$cap_ap_postgres_username
+          label: PostgreSQL Username
+          defaultValue: activepieces
+          validRegex: /^[\w]+$/

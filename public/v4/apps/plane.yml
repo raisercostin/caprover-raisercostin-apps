@@ -1,0 +1,403 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname-api:
+        restart: always
+        environment:
+            DEBUG: $$cap_debug
+            DJANGO_SETTINGS_MODULE: $$cap_django_settings_module
+            SENTRY_DSN: $$cap_sentry_dsn
+            POSTGRES_USER: $$cap_pguser
+            POSTGRES_PASSWORD: $$cap_pgpassword
+            POSTGRES_DB: $$cap_pgdatabase
+            POSTGRES_HOST: srv-captain--$$cap_appname-db
+            DATABASE_URL: postgresql://$$cap_pguser:$$cap_pgpassword@srv-captain--$$cap_appname-db:5432/$$cap_pgdatabase
+            REDIS_HOST: srv-captain--$$cap_appname-redis
+            REDIS_PORT: '6379'
+            REDIS_URL: redis://srv-captain--$$cap_appname-redis:6379
+            EMAIL_HOST: $$cap_email_host
+            EMAIL_HOST_USER: $$cap_email_host_user
+            EMAIL_HOST_PASSWORD: $$cap_email_host_password
+            EMAIL_PORT: $$cap_email_port
+            EMAIL_FROM: $$cap_email_from
+            EMAIL_USE_TLS: $$cap_email_use_tls
+            EMAIL_USE_SSL: $$cap_email_use_ssl
+            AWS_REGION: $$cap_aws_region
+            AWS_ACCESS_KEY_ID: $$cap_aws_access_key_id
+            AWS_SECRET_ACCESS_KEY: $$cap_aws_secret_access_key
+            AWS_S3_ENDPOINT_URL: $$cap_aws_s3_endpoint_url
+            AWS_S3_BUCKET_NAME: $$cap_aws_s3_bucket_name
+            FILE_SIZE_LIMIT: $$cap_file_size_limit
+            OPENAI_API_BASE: $$cap_openai_api_base
+            OPENAI_API_KEY: $$cap_openai_api_key
+            GPT_ENGINE: $$cap_gpt_engine
+            GITHUB_CLIENT_SECRET: $$cap_github_client_secret
+            DOCKERIZED: '1'
+            USE_MINIO: $$cap_use_minio
+            DEFAULT_EMAIL: $$cap_default_email
+            DEFAULT_PASSWORD: $$cap_default_password
+            ENABLE_SIGNUP: $$cap_enable_signup
+            ENABLE_EMAIL_PASSWORD: $$cap_enable_email_password
+            ENABLE_MAGIC_LINK_LOGIN: $$cap_enable_magic_link_login
+            SECRET_KEY: $$cap_secret_key
+            WEB_URL:
+        depends_on:
+            - $$cap_appname-db
+            - $$cap_appname-redis
+        caproverExtra:
+            containerHttpPort: 8000
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM makeplane/plane-backend:latest
+                - CMD ./bin/takeoff
+
+    $$cap_appname-worker:
+        restart: always
+        environment:
+            DEBUG: $$cap_debug
+            DJANGO_SETTINGS_MODULE: $$cap_django_settings_module
+            SENTRY_DSN: $$cap_sentry_dsn
+            POSTGRES_USER: $$cap_pguser
+            POSTGRES_PASSWORD: $$cap_pgpassword
+            POSTGRES_DB: $$cap_pgdatabase
+            POSTGRES_HOST: srv-captain--$$cap_appname-db
+            DATABASE_URL: postgresql://$$cap_pguser:$$cap_pgpassword@srv-captain--$$cap_appname-db:5432/$$cap_pgdatabase
+            REDIS_HOST: srv-captain--$$cap_appname-redis
+            REDIS_PORT: '6379'
+            REDIS_URL: redis://srv-captain--$$cap_appname-redis:6379
+            EMAIL_HOST: $$cap_email_host
+            EMAIL_HOST_USER: $$cap_email_host_user
+            EMAIL_HOST_PASSWORD: $$cap_email_host_password
+            EMAIL_PORT: $$cap_email_port
+            EMAIL_FROM: $$cap_email_from
+            EMAIL_USE_TLS: $$cap_email_use_tls
+            EMAIL_USE_SSL: $$cap_email_use_ssl
+            AWS_REGION: $$cap_aws_region
+            AWS_ACCESS_KEY_ID: $$cap_aws_access_key_id
+            AWS_SECRET_ACCESS_KEY: $$cap_aws_secret_access_key
+            AWS_S3_ENDPOINT_URL: $$cap_aws_s3_endpoint_url
+            AWS_S3_BUCKET_NAME: $$cap_aws_s3_bucket_name
+            FILE_SIZE_LIMIT: $$cap_file_size_limit
+            OPENAI_API_BASE: $$cap_openai_api_base
+            OPENAI_API_KEY: $$cap_openai_api_key
+            GPT_ENGINE: $$cap_gpt_engine
+            GITHUB_CLIENT_SECRET: $$cap_github_client_secret
+            DOCKERIZED: '1'
+            USE_MINIO: $$cap_use_minio
+            DEFAULT_EMAIL: $$cap_default_email
+            DEFAULT_PASSWORD: $$cap_default_password
+            ENABLE_SIGNUP: $$cap_enable_signup
+            ENABLE_EMAIL_PASSWORD: $$cap_enable_email_password
+            ENABLE_MAGIC_LINK_LOGIN: $$cap_enable_magic_link_login
+            SECRET_KEY: $$cap_secret_key
+        depends_on:
+            - $$cap_appname-api
+            - $$cap_appname-db
+            - $$cap_appname-redis
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM makeplane/plane-backend:latest
+                - CMD ./bin/worker
+
+    $$cap_appname-beatworker:
+        restart: always
+        environment:
+            DEBUG: $$cap_debug
+            DJANGO_SETTINGS_MODULE: $$cap_django_settings_module
+            SENTRY_DSN: $$cap_sentry_dsn
+            POSTGRES_USER: $$cap_pguser
+            POSTGRES_PASSWORD: $$cap_pgpassword
+            POSTGRES_DB: $$cap_pgdatabase
+            POSTGRES_HOST: srv-captain--$$cap_appname-db
+            DATABASE_URL: postgresql://$$cap_pguser:$$cap_pgpassword@srv-captain--$$cap_appname-db:5432/$$cap_pgdatabase
+            REDIS_HOST: srv-captain--$$cap_appname-redis
+            REDIS_PORT: '6379'
+            REDIS_URL: redis://srv-captain--$$cap_appname-redis:6379
+            EMAIL_HOST: $$cap_email_host
+            EMAIL_HOST_USER: $$cap_email_host_user
+            EMAIL_HOST_PASSWORD: $$cap_email_host_password
+            EMAIL_PORT: $$cap_email_port
+            EMAIL_FROM: $$cap_email_from
+            EMAIL_USE_TLS: $$cap_email_use_tls
+            EMAIL_USE_SSL: $$cap_email_use_ssl
+            AWS_REGION: $$cap_aws_region
+            AWS_ACCESS_KEY_ID: $$cap_aws_access_key_id
+            AWS_SECRET_ACCESS_KEY: $$cap_aws_secret_access_key
+            AWS_S3_ENDPOINT_URL: $$cap_aws_s3_endpoint_url
+            AWS_S3_BUCKET_NAME: $$cap_aws_s3_bucket_name
+            FILE_SIZE_LIMIT: $$cap_file_size_limit
+            OPENAI_API_BASE: $$cap_openai_api_base
+            OPENAI_API_KEY: $$cap_openai_api_key
+            GPT_ENGINE: $$cap_gpt_engine
+            GITHUB_CLIENT_SECRET: $$cap_github_client_secret
+            DOCKERIZED: '1'
+            USE_MINIO: $$cap_use_minio
+            DEFAULT_EMAIL: $$cap_default_email
+            DEFAULT_PASSWORD: $$cap_default_password
+            ENABLE_SIGNUP: $$cap_enable_signup
+            ENABLE_EMAIL_PASSWORD: $$cap_enable_email_password
+            ENABLE_MAGIC_LINK_LOGIN: $$cap_enable_magic_link_login
+            SECRET_KEY: $$cap_secret_key
+        depends_on:
+            - $$cap_appname-api
+            - $$cap_appname-db
+            - $$cap_appname-redis
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM makeplane/plane-backend:latest
+                - CMD ./bin/beat
+
+    $$cap_appname:
+        restart: always
+        environment:
+            NEXT_PUBLIC_ENABLE_OAUTH: $$cap_next_public_enable_oauth
+            NEXT_PUBLIC_DEPLOY_URL: $$cap_next_public_deploy_url
+        depends_on:
+            - $$cap_appname-api
+            - $$cap_appname-worker
+        caproverExtra:
+            containerHttpPort: 3000
+            websocketSupport: 'true'
+            dockerfileLines:
+                - FROM makeplane/plane-frontend:latest
+                - CMD /usr/local/bin/start.sh web/server.js web
+
+    $$cap_appname-space:
+        restart: always
+        environment:
+            NEXT_PUBLIC_ENABLE_OAUTH: $$cap_next_public_enable_oauth
+        depends_on:
+            - $$cap_appname-api
+            - $$cap_appname-worker
+            - $$cap_appname
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            containerHttpPort: 3000
+            dockerfileLines:
+                - FROM makeplane/plane-space:latest
+                - CMD /usr/local/bin/start.sh space/server.js space
+
+    $$cap_appname-redis:
+        image: redis:$$cap_redis_version
+        restart: always
+        volumes:
+            - $$cap_appname-redisdata:/data
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+    $$cap_appname-db:
+        image: postgres:$$cap_postgres_version
+        volumes:
+            - $$cap_appname-db-data:/var/lib/postgresql/data
+        restart: always
+        environment:
+            POSTGRES_USER: $$cap_pguser
+            POSTGRES_PASSWORD: $$cap_pgpassword
+            POSTGRES_DB: $$cap_pgdatabase
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+
+caproverOneClickApp:
+    displayName: Plane
+    description: Collaborative, self-hosted platform for team communication and project management
+    isOfficial: true
+    documentation: https://plane.so
+    instructions:
+        start: |-
+            Plane provides a seamless and intuitive way to manage projects, communicate with your team, and streamline workflows, all from a self-hosted platform. It’s an ideal solution for teams looking for an open-source and privacy-focused alternative to mainstream communication tools.
+        end: |-
+            ✅  Plane has been deployed!
+            --------------------------------------------
+            _Plane has been successfully deployed! Follow the steps below before accessing https://$$cap_appname.$$cap_root_domain._
+
+            --------------------------------------------
+            ❗️ **IMPORTANT**: Before using Plane, ensure the following:
+
+            **Step 1**: Adjust settings for `$$cap_appname`.
+            **Step 2**: Enable **HTTPS** for secure access.
+            **Step 3**: Consider enabling **Websocket Support** if necessary.
+
+            🌐 After completing these steps, Plane can be accessed at:
+
+            **Plane Interface**: https://$$cap_appname.$$cap_root_domain
+
+            --------------------------------------------
+            🔰 For more details on setup and configuration, refer to the Plane documentation.
+    variables:
+        # Define necessary variables here based on Plane's configuration requirements.
+        # Redis
+        - id: $$cap_redis_version
+          label: Redis Version
+          description: Version of Redis to use
+          defaultValue: '7-alpine'
+        # DB
+        - id: $$cap_postgres_version
+          label: PostgreSQL Version
+          description: Version of PostgreSQL to use
+          defaultValue: '15.2-alpine'
+
+        - id: $$cap_pguser
+          label: PostgreSQL User
+          description: Username for PostgreSQL
+          defaultValue: 'plane'
+
+        - id: $$cap_pgpassword
+          label: PostgreSQL Password
+          description: Password for PostgreSQL
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: $$cap_gen_random_hex(12)
+
+        - id: $$cap_pgdatabase
+          label: PostgreSQL Database
+          description: Database name for PostgreSQL
+          defaultValue: 'plane'
+
+        # API
+        - id: $$cap_debug
+          label: Debug Mode
+          description: Enable or disable debug mode (0 or 1)
+          defaultValue: '1'
+
+        - id: $$cap_django_settings_module
+          label: Django Settings Module
+          description: Django settings module path
+          defaultValue: 'plane.settings.selfhosted'
+
+        - id: $$cap_sentry_dsn
+          label: Sentry DSN
+          description: Sentry DSN for error logging
+          defaultValue: 'https://fa747043d9da193163d8c95a7da8f151@sentry.uhlhost.net/24'
+
+        - id: $$cap_email_host
+          label: Email Host
+          description: Host for email sending
+          defaultValue: 'post.uhlhosting.ch'
+
+        - id: $$cap_email_host_user
+          label: Email Host User
+          description: Username for email host
+          defaultValue: ''
+
+        - id: $$cap_email_host_password
+          label: Email Host Password
+          description: Password for email host
+          defaultValue: ''
+
+        - id: $$cap_email_port
+          label: Email Port
+          description: Port for email service
+          defaultValue: '25'
+
+        - id: $$cap_email_from
+          label: Email From Address
+          description: "'From' address for sending emails"
+          defaultValue: 'Team Plane <team@domain.com>'
+
+        - id: $$cap_email_use_tls
+          label: Email Use TLS
+          description: Indicates whether to use TLS for email (1 for yes, 0 for no)
+          defaultValue: '1'
+
+        - id: $$cap_email_use_ssl
+          label: Email Use SSL
+          description: Indicates whether to use SSL for email (1 for yes, 0 for no)
+          defaultValue: '0'
+
+        - id: $$cap_aws_access_key_id
+          label: AWS Access Key ID
+          description: AWS Access Key ID for S3 and other services
+          defaultValue: ''
+
+        - id: $$cap_aws_secret_access_key
+          label: AWS Secret Access Key
+          description: AWS Secret Access Key for S3 and other services
+          defaultValue: ''
+
+        - id: $$cap_aws_region
+          label: AWS Region
+          description: AWS region for services like S3
+          defaultValue: 'eu-ovh'
+
+        - id: $$cap_aws_s3_endpoint_url
+          label: AWS S3 Endpoint URL
+          description: Endpoint URL for AWS S3 services
+          defaultValue: 'https://s3-api.uhl.cloud'
+
+        - id: $$cap_aws_s3_bucket_name
+          label: AWS S3 Bucket Name
+          description: Bucket name for AWS S3
+          defaultValue: 'uploads'
+
+        - id: $$cap_file_size_limit
+          label: File Size Limit
+          description: Maximum file size limit in bytes
+          defaultValue: '5242880'
+
+        - id: $$cap_openai_api_base
+          label: OpenAI API Base URL
+          description: Base URL for OpenAI API
+          defaultValue: 'https://api.openai.com/v1'
+
+        - id: $$cap_openai_api_key
+          label: OpenAI API Key
+          description: API key for accessing OpenAI services
+          defaultValue: 'sk-'
+
+        - id: $$cap_gpt_engine
+          label: GPT Engine
+          description: GPT engine version (e.g., gpt-4)
+          defaultValue: 'gpt-4'
+
+        - id: $$cap_github_client_secret
+          label: GitHub Client Secret
+          description: Client secret for GitHub OAuth
+          defaultValue: ''
+
+        - id: $$cap_default_email
+          label: Default Login Email
+          description: Default email address for the application
+          defaultValue: 'captain@plane.so'
+
+        - id: $$cap_default_password
+          label: Default Login Password
+          description: Default password for the application
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: '$$cap_gen_random_hex(12)'
+
+        - id: $$cap_enable_signup
+          label: Enable Signup
+          description: Enable or disable signup feature (1 for enable, 0 for disable)
+          defaultValue: '1'
+
+        - id: $$cap_enable_email_password
+          label: Enable Email Password
+          description: Enable or disable email/password login (1 for enable, 0 for disable)
+          defaultValue: '1'
+
+        - id: $$cap_enable_magic_link_login
+          label: Enable Magic Link Login
+          description: Enable or disable magic link login feature (1 for enable, 0 for disable)
+          defaultValue: '1'
+
+        - id: $$cap_secret_key
+          label: Secret Key
+          description: Secret key for the application
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: $$cap_gen_random_hex(64)
+
+        - id: $$cap_use_minio
+          label: Use Minio
+          description: Use Minio for file storage (1 for yes, 0 for no)
+          defaultValue: '1'
+        # WEB
+        - id: $$cap_next_public_enable_oauth
+          label: Enable OAuth
+          description: Flag to enable or disable OAuth (0 or 1)
+          defaultValue: '0'
+
+        - id: $$cap_next_public_deploy_url
+          label: Deploy URL
+          description: URL where the app is deployed
+          defaultValue: 'https://$$cap_appname.$$cap_root_domain'

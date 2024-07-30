@@ -1,0 +1,152 @@
+---
+captainVersion: 4
+services:
+    # MongoDB Service
+    $$cap_appname-mongodb:
+        image: mongo:7-jammy
+        container_name: mongodb
+        environment:
+            - PUID=1000
+            - PGID=1000
+        volumes:
+            - $$cap_appname-mongodb-data:/data/db
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '27017'
+
+    # Elasticsearch Service
+    $$cap_appname-elastic:
+        image: elasticsearch:7.14.2
+        command: |
+            /bin/sh -c "./bin/elasticsearch-plugin list | grep -q ingest-attachment || yes | ./bin/elasticsearch-plugin install --silent ingest-attachment; /usr/local/bin/docker-entrypoint.sh eswrapper"
+        volumes:
+            - $$cap_appname-elastic-data:/usr/share/elasticsearch/data
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '9200'
+
+    # Account Service
+    $$cap_appname-account:
+        image: hardcoreeng/account
+        depends:
+            - $$cap_appname-mongodb
+        environment:
+            - SERVER_PORT=3000
+            - SERVER_SECRET=secret
+            - MONGO_URL=mongodb://$$cap_appname-mongodb:27017
+            - TRANSACTOR_URL=ws://$$cap_appname-transactor:3333
+            - ENDPOINT_URL=ws://${SERVER_ADDRESS}:3333
+            - MINIO_ENDPOINT=minio
+            - MINIO_ACCESS_KEY=minioadmin
+            - MINIO_SECRET_KEY=minioadmin
+            - FRONT_URL=http://front:8080
+            - INIT_WORKSPACE=demo-tracker
+            - MODEL_ENABLED=*
+            - ACCOUNTS_URL=http://localhost:3000
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '3000'
+
+    # Front Service
+    $$cap_appname-front:
+        image: hardcoreeng/front
+        depends:
+            - $$cap_appname-mongodb
+            - $$cap_appname-elastic
+            - $$cap_appname-collaborator
+            - $$cap_appname-transactor
+        environment:
+            - SERVER_PORT=8080
+            - SERVER_SECRET=secret
+            - ACCOUNTS_URL=http://${SERVER_ADDRESS}:3000
+            - REKONI_URL=http://${SERVER_ADDRESS}:4004
+            - CALENDAR_URL=http://${SERVER_ADDRESS}:8095
+            - GMIPML_URL=http://${SERVER_ADDRESS}:8088
+            - TELEGRAM_URL=http://${SERVER_ADDRESS}:8086
+            - UPLOAD_URL=/files
+            - TRANSACTOR_URL=ws://${SERVER_ADDRESS}:3333
+            - ELASTIC_URL=http://$$cap_appname-elastic:9200
+            - COLLABORATOR_URL=ws://${SERVER_ADDRESS}:3078
+            - COLLABORATOR_API_URL=http://${SERVER_ADDRESS}:3078
+            - MINIO_ENDPOINT=minio
+            - MINIO_ACCESS_KEY=minioadmin
+            - MINIO_SECRET_KEY=minioadmin
+            - TITLE=Huly Self Hosted
+            - DEFAULT_LANGUAGE=en
+            - LAST_NAME_FIRST=true
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '8087'
+
+    # Collaborator Service
+    $$cap_appname-collaborator:
+        image: hardcoreeng/collaborator
+        depends:
+            - $$cap_appname-mongodb
+            - $$cap_appname-transactor
+        environment:
+            - COLLABORATOR_PORT=3078
+            - SECRET=secret
+            - ACCOUNTS_URL=http://$$cap_appname-account:3000
+            - TRANSACTOR_URL=ws://$$cap_appname-transactor:3333
+            - UPLOAD_URL=/files
+            - MONGO_URL=mongodb://$$cap_appname-mongodb:27017
+            - MINIO_ENDPOINT=minio
+            - MINIO_ACCESS_KEY=minioadmin
+            - MINIO_SECRET_KEY=minioadmin
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '3078'
+
+    # Transactor Service
+    $$cap_appname-transactor:
+        image: hardcoreeng/transactor
+        depends:
+            - $$cap_appname-mongodb
+            - $$cap_appname-elastic
+            - $$cap_appname-minio
+            - $$cap_appname-rekoni
+            - $$cap_appname-account
+        environment:
+            - SERVER_PORT=3333
+            - SERVER_SECRET=secret
+            - SERVER_CURSOR_MAXTIMEMS=30000
+            - ELASTIC_URL=http://$$cap_appname-elastic:9200
+            - MONGO_URL=mongodb://$$cap_appname-mongodb:27017
+            - METRICS_CONSOLE=false
+            - METRICS_FILE=metrics.txt
+            - MINIO_ENDPOINT=minio
+            - MINIO_ACCESS_KEY=minioadmin
+            - MINIO_SECRET_KEY=minioadmin
+            - REKONI_URL=http://$$cap_appname-rekoni:4004
+            - FRONT_URL=http://localhost:8087
+            - SERVER_PROVIDER=ws
+            - ACCOUNTS_URL=http://$$cap_appname-account:3000
+            - LAST_NAME_FIRST=true
+        restart: unless-stopped
+
+    # Rekoni Service
+    $$cap_appname-rekoni:
+        image: hardcoreeng/rekoni-service
+        ports:
+            - 4004:4004
+        deploy:
+            resources:
+                limits:
+                    memory: 500M
+        restart: unless-stopped
+
+volumes:
+    $$cap_appname-mongodb-data:
+    $$cap_appname-elastic-data:
+
+caproverOneClickApp:
+    instructions:
+        start: >-
+            huly is a powerful IPM tool. Before you start, make sure you have all your environment variables ready to input.
+        end: >-
+            Your huly app is now deployed and running! Access it at `http://$$cap_appname.$$cap_root_domain`.
+    displayName: 'huly'
+    isOfficial: true
+    description: 'huly IPM Tool'
+    documentation: 'https://github.com/hulyIPM/huly'

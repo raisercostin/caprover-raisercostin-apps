@@ -1,0 +1,430 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname-studio:
+        image: supabase/studio:latest
+        restart: unless-stopped
+        caproverExtra:
+            websocketSupport: 'true'
+            containerHttpPort: 3000
+        environment:
+            STUDIO_PG_META_URL: http://srv-captain--$$cap_appname-meta:8080
+            POSTGRES_PASSWORD: $$cap_postgres_password
+            DEFAULT_ORGANIZATION_NAME: $$cap_studio_default_organization
+            DEFAULT_PROJECT_NAME: $$cap_studio_default_project
+            SUPABASE_URL: srv-captain--$$cap_appname-kong:8000
+            SUPABASE_PUBLIC_URL: srv-captain--$$cap_supabase_public_url
+            SUPABASE_ANON_KEY: $$cap_anon_key
+            SUPABASE_SERVICE_KEY: $$cap_service_role_key
+            LOGFLARE_API_KEY: $$cap_logflare_api_key
+            LOGFLARE_URL: http://srv-captain--$$cap_appname-analytics:4000
+            NEXT_PUBLIC_ENABLE_LOGS: 'true'
+            NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+        depends_on:
+            - $$cap_appname-analytics
+            - $$cap_appname-db
+
+    $$cap_appname-kong:
+        image: kong:2.8.1
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: '8000'
+            containerHttpsPort: '8443'
+            websocketSupport: 'true'
+        environment:
+            KONG_DATABASE: 'off'
+            KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+            KONG_DNS_ORDER: LAST,A,CNAME
+            SUPABASE_ANON_KEY: $$cap_anon_key
+            SUPABASE_SERVICE_KEY: $$cap_service_role_key
+            DASHBOARD_USERNAME: $$cap_dashboard_username
+            DASHBOARD_PASSWORD: $$cap_dashboard_password
+        volumes:
+            - $$cap_appname-kong-config:/home/kong
+        depends_on:
+            - $$cap_appname-analytics
+
+    $$cap_appname-auth:
+        image: supabase/gotrue:v2.99.0
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: 9999
+            notExposeAsWebApp: 'true'
+        environment:
+            GOTRUE_API_HOST: 0.0.0.0
+            GOTRUE_API_PORT: 9999
+            API_EXTERNAL_URL: $$cap_api_external_url
+            GOTRUE_DB_DRIVER: postgres
+            GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:$$cap_postgres_password@srv-captain--$$cap_appname-db:5432/$$cap_db_name
+            GOTRUE_SITE_URL: $$cap_gotrue_site_url
+            GOTRUE_URI_ALLOW_LIST: $$cap_gotrue_uri_allow_list
+            GOTRUE_DISABLE_SIGNUP: $$cap_gotrue_disable_signup
+            GOTRUE_JWT_ADMIN_ROLES: service_role
+            GOTRUE_JWT_AUD: authenticated
+            GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+            GOTRUE_JWT_EXP: $$cap_jwt_expiry
+            GOTRUE_JWT_SECRET: $$cap_jwt_secret
+            GOTRUE_EXTERNAL_EMAIL_ENABLED: $$cap_gotrue_external_email_enabled
+            GOTRUE_MAILER_AUTOCONFIRM: $$cap_gotrue_mailer_autoconfirm
+            GOTRUE_SMTP_ADMIN_EMAIL: $$cap_smtp_admin_email
+            GOTRUE_SMTP_HOST: $$cap_smtp_host
+            GOTRUE_SMTP_PORT: $$cap_smtp_port
+            GOTRUE_SMTP_USER: $$cap_smtp_user
+            GOTRUE_SMTP_PASS: $$cap_smtp_pass
+            GOTRUE_SMTP_SENDER_NAME: $$cap_smtp_sender_name
+            GOTRUE_MAILER_URLPATHS_INVITE: $$cap_mailer_urlpaths_invite
+            GOTRUE_MAILER_URLPATHS_CONFIRMATION: $$cap_mailer_urlpaths_confirmation
+            GOTRUE_MAILER_URLPATHS_RECOVERY: $$cap_mailer_urlpaths_recovery
+            GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: $$cap_mailer_urlpaths_email_change
+            GOTRUE_EXTERNAL_PHONE_ENABLED: $$cap_gotrue_external_phone_enabled
+            GOTRUE_SMS_AUTOCONFIRM: $$cap_gotrue_sms_autoconfirm
+        depends_on:
+            - $$cap_appname-analytics
+            - $$cap_appname-db
+
+    $$cap_appname-realtime:
+        image: supabase/realtime:v2.25.35
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: 4000
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - CMD exec sh -c "/app/bin/migrate && /app/bin/realtime eval 'Realtime.Release.seeds(Realtime.Repo)' && /app/bin/server"
+        environment:
+            PORT: 4000
+            DB_HOST: srv-captain--$$cap_appname-db
+            DB_PORT: 5432
+            DB_USER: supabase_admin
+            DB_PASSWORD: $$cap_postgres_password
+            DB_NAME: $$cap_db_name
+            DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+            DB_ENC_KEY: supabaserealtime
+            API_JWT_SECRET: $$cap_jwt_secret
+            SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfYTuRgBiYa15BLrx8etQoXz3gZv1/u2oq
+            ERL_AFLAGS: '-proto_dist inet_tcp'
+            ENABLE_TAILSCALE: 'false'
+            DNS_NODES: "''"
+        depends_on:
+            - $$cap_appname-analytics
+            - $$cap_appname-db
+
+    $$cap_appname-rest:
+        image: postgrest/postgrest:v11.2.0
+        restart: unless-stopped
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - CMD exec postgrest
+        environment:
+            PGRST_DB_URI: postgres://authenticator:$$cap_postgres_password@srv-captain--$$cap_appname-db:5432/$$cap_db_name
+            PGRST_DB_SCHEMAS: $$cap_pgrst_db_schemas
+            PGRST_DB_ANON_ROLE: anon
+            PGRST_JWT_SECRET: $$cap_jwt_secret
+            PGRST_DB_USE_LEGACY_GUCS: 'false'
+            PGRST_APP_SETTINGS_JWT_SECRET: $$cap_jwt_secret
+            PGRST_APP_SETTINGS_JWT_EXP: $$cap_jwt_expiry
+        depends_on:
+            - $$cap_appname-analytics
+            - $$cap_appname-db
+
+    $$cap_appname-storage:
+        image: supabase/storage-api:v0.40.4
+        restart: unless-stopped
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+        environment:
+            ANON_KEY: $$cap_anon_key
+            SERVICE_KEY: $$cap_service_role_key
+            POSTGREST_URL: http://srv-captain--$$cap_appname-rest:3000
+            PGRST_JWT_SECRET: $$cap_jwt_secret
+            DATABASE_URL: postgres://supabase_storage_admin:$$cap_postgres_password@srv-captain--$$cap_appname-db:5432/$$cap_db_name
+            FILE_SIZE_LIMIT: 52428800
+            STORAGE_BACKEND: file
+            FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+            TENANT_ID: stub
+            REGION: stub
+            GLOBAL_S3_BUCKET: stub
+            ENABLE_IMAGE_TRANSFORMATION: 'true'
+            IMGPROXY_URL: http://srv-captain--$$cap_appname-imgproxy:5001
+        volumes:
+            - $$cap_appname-storage-data:/var/lib/storage
+        depends_on:
+            - $$cap_appname-rest
+            - $$cap_appname-db
+            - $$cap_appname-imgproxy
+
+    $$cap_appname-imgproxy:
+        image: darthsim/imgproxy:v3.8.0
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: 5001
+            notExposeAsWebApp: 'false'
+        environment:
+            IMGPROXY_BIND: ':5001'
+            IMGPROXY_LOCAL_FILESYSTEM_ROOT: '/'
+            IMGPROXY_USE_ETAG: 'true'
+            IMGPROXY_ENABLE_WEBP_DETECTION: $$cap_imgproxy_enable_webp_detection
+        volumes:
+            - $$cap_appname-storage-data:/var/lib/storage
+
+    $$cap_appname-meta:
+        image: supabase/postgres-meta:v0.68.0
+        restart: unless-stopped
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+        environment:
+            PG_META_PORT: 8080
+            PG_META_DB_HOST: srv-captain--$$cap_appname-db
+            PG_META_DB_PORT: 5432
+            PG_META_DB_NAME: $$cap_db_name
+            PG_META_DB_USER: supabase
+            PG_META_DB_PASSWORD: $$cap_postgres_password
+        depends_on:
+            - $$cap_appname-analytics
+            - $$cap_appname-db
+
+    $$cap_appname-functions:
+        image: supabase/edge-runtime:v1.22.4
+        restart: unless-stopped
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+        environment:
+            JWT_SECRET: $$cap_jwt_secret
+            SUPABASE_URL: http://srv-captain--$$cap_appname-kong:8000
+            SUPABASE_ANON_KEY: $$cap_anon_key
+            SUPABASE_SERVICE_ROLE_KEY: $$cap_service_role_key
+            SUPABASE_DB_URL: postgresql://supabase:$$cap_postgres_password@srv-captain--$$cap_appname-db:5432/$$cap_db_name
+            VERIFY_JWT: $$cap_functions_verify_jwt
+        volumes:
+            - $$cap_appname-functions-data:/home/deno/functions
+        depends_on:
+            - $$cap_appname-analytics
+
+    $$cap_appname-analytics:
+        image: supabase/logflare:1.4.0
+        restart: unless-stopped
+        caproverExtra:
+            containerHttpPort: 4000
+            notExposeAsWebApp: 'true'
+        environment:
+            LOGFLARE_NODE_HOST: 127.0.0.1
+            DB_USERNAME: supabase
+            DB_DATABASE: $$cap_db_name
+            DB_HOSTNAME: srv-captain--$$cap_appname-db
+            DB_PORT: 5432
+            DB_PASSWORD: $$cap_postgres_password
+            DB_SCHEMA: _analytics
+            LOGFLARE_API_KEY: $$cap_logflare_api_key
+            LOGFLARE_SINGLE_TENANT: 'true'
+            LOGFLARE_SUPABASE_MODE: 'true'
+            LOGFLARE_MIN_CLUSTER_SIZE: 1
+            RELEASE_COOKIE: cookie
+            POSTGRES_BACKEND_URL: postgresql://supabase:$$cap_postgres_password@srv-captain--$$cap_appname-db:5432/$$cap_db_name
+            POSTGRES_BACKEND_SCHEMA: _analytics
+            LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
+        depends_on:
+            - $$cap_appname-db
+
+    $$cap_appname-db:
+        image: supabase/postgres:15.1.0.117
+        restart: unless-stopped
+        environment:
+            POSTGRES_HOST: /var/run/postgresql
+            PGPORT: $$cap_db_port
+            POSTGRES_PORT: $$cap_db_port
+            PGPASSWORD: $$cap_postgres_password
+            POSTGRES_PASSWORD: $$cap_postgres_password
+            PGDATABASE: $$cap_db_name
+            POSTGRES_DB: $$cap_db_name
+            JWT_SECRET: $$cap_jwt_secret
+            JWT_EXP: $$cap_jwt_expiry
+        volumes:
+            - $$cap_appname-db-data:/var/lib/postgresql/data:Z
+            - /volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+            # Must be superuser to create event trigger
+            - /volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+            # Must be superuser to alter reserved role
+            - /volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+            # Initialize the database settings with JWT_SECRET and JWT_EXP
+            - /volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+            # Changes required for Analytics support
+            - /volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - CMD exec postgres -c config_file=/etc/postgresql/postgresql.conf -c log_min_messages=fatal
+        depends_on:
+            - $$cap_appname-vector
+
+    $$cap_appname-vector:
+        image: timberio/vector:0.28.1-alpine
+        volumes:
+            - /volumes/logs/vector.yml:/etc/vector/vector.yml:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - CMD exec --config etc/vector/vector.yml
+
+caproverOneClickApp:
+    variables:
+        # Define necessary environment variables
+        # Variables for Studio
+        - id: $$cap_postgres_password
+          label: PostgreSQL Password
+          description: 'Password for the PostgreSQL database.'
+          defaultValue: '$$cap_gen_random_hex(12)'
+        - id: $$cap_studio_default_organization
+          label: Studio Default Organization
+          description: 'Default organization name for Studio.'
+          defaultValue: 'SupabaseOrg'
+        - id: $$cap_studio_default_project
+          label: Studio Default Project
+          description: 'Default project name for Studio.'
+          defaultValue: 'SupabaseProject'
+        - id: $$cap_supabase_public_url
+          label: Supabase Public URL
+          description: 'Public URL for the Supabase instance.'
+          defaultValue: 'http://$$cap_appname.$$cap_root_domain'
+        - id: $$cap_anon_key
+          label: Supabase Anon Key
+          description: 'Anonymous API key for Supabase.'
+          defaultValue: '$$cap_gen_random_hex(32)'
+        - id: $$cap_service_role_key
+          label: Supabase Service Role Key
+          description: 'Service role API key for Supabase.'
+          defaultValue: '$$cap_gen_random_hex(32)'
+        - id: $$cap_logflare_api_key
+          label: Logflare API Key
+          description: 'API key for Logflare.'
+          defaultValue: '$$cap_gen_random_hex(32)'
+
+        # Variables for Kong
+        - id: $$cap_dashboard_username
+          label: Dashboard Username
+          description: 'Username for the Kong dashboard.'
+          defaultValue: 'admin'
+        - id: $$cap_dashboard_password
+          label: Dashboard Password
+          description: 'Password for the Kong dashboard.'
+          defaultValue: '$$cap_gen_random_hex(12)'
+
+        # Variables for Auth
+        - id: $$cap_api_external_url
+          label: Auth API External URL
+          description: 'External URL for the Auth API.'
+          defaultValue: 'http://localhost:9999'
+        - id: $$cap_gotrue_site_url
+          label: GoTrue Site URL
+          description: 'Site URL for GoTrue.'
+          defaultValue: 'http://localhost:9999'
+        - id: $$cap_gotrue_uri_allow_list
+          label: GoTrue URI Allow List
+          description: 'URI allow list for GoTrue.'
+          defaultValue: ''
+        - id: $$cap_gotrue_disable_signup
+          label: GoTrue Disable Signup
+          description: 'Disable signup for GoTrue.'
+          defaultValue: 'false'
+        - id: $$cap_gotrue_external_email_enabled
+          label: GoTrue External Email Enabled
+          description: 'Enable external email for GoTrue.'
+          defaultValue: 'true'
+        - id: $$cap_gotrue_mailer_autoconfirm
+          label: GoTrue Mailer Autoconfirm
+          description: 'Enable autoconfirmation for mailer in GoTrue.'
+          defaultValue: 'false'
+        - id: $$cap_smtp_admin_email
+          label: SMTP Admin Email
+          description: 'Admin email for SMTP.'
+          defaultValue: 'admin@example.com'
+        - id: $$cap_smtp_host
+          label: SMTP Host
+          description: 'Host for SMTP.'
+          defaultValue: 'smtp.example.com'
+        - id: $$cap_smtp_port
+          label: SMTP Port
+          description: 'Port for SMTP.'
+          defaultValue: '587'
+        - id: $$cap_smtp_user
+          label: SMTP User
+          description: 'User for SMTP.'
+          defaultValue: 'user'
+        - id: $$cap_smtp_pass
+          label: SMTP Password
+          description: 'Password for SMTP.'
+          defaultValue: ''
+        - id: $$cap_smtp_sender_name
+          label: SMTP Sender Name
+          description: 'Sender name for SMTP.'
+          defaultValue: 'Supabase'
+        - id: $$cap_mailer_urlpaths_invite
+          label: Mailer URL Paths Invite
+          description: 'URL paths for mailer invite.'
+          defaultValue: ''
+        - id: $$cap_mailer_urlpaths_confirmation
+          label: Mailer URL Paths Confirmation
+          description: 'URL paths for mailer confirmation.'
+          defaultValue: ''
+        - id: $$cap_mailer_urlpaths_recovery
+          label: Mailer URL Paths Recovery
+          description: 'URL paths for mailer recovery.'
+          defaultValue: ''
+        - id: $$cap_mailer_urlpaths_email_change
+          label: Mailer URL Paths Email Change
+          description: 'URL paths for mailer email change.'
+          defaultValue: ''
+        - id: $$cap_gotrue_external_phone_enabled
+          label: GoTrue External Phone Enabled
+          description: 'Enable external phone for GoTrue.'
+          defaultValue: 'false'
+        - id: $$cap_gotrue_sms_autoconfirm
+          label: GoTrue SMS Autoconfirm
+          description: 'Enable SMS autoconfirmation for GoTrue.'
+          defaultValue: 'false'
+
+        # Variables for Realtime
+        - id: $$cap_jwt_secret
+          label: JWT Secret
+          description: 'JWT secret key.'
+          defaultValue: '$$cap_gen_random_hex(64)'
+
+        # Variables for Rest
+        - id: $$cap_pgrst_db_schemas
+          label: PostgREST DB Schemas
+          description: 'Schemas to be exposed in the REST API.'
+          defaultValue: 'public'
+
+        # Variables for Storage
+        - id: $$cap_imgproxy_enable_webp_detection
+          label: Imgproxy Enable WebP Detection
+          description: 'Enable WebP detection in Imgproxy.'
+          defaultValue: 'true'
+
+        # Variables for Functions
+        - id: $$cap_functions_verify_jwt
+          label: Functions Verify JWT
+          description: 'Flag to verify JWT in functions.'
+          defaultValue: 'true'
+
+        # Variables for Database
+        - id: $$cap_db_port
+          label: Database Port
+          description: 'Port for the database.'
+          defaultValue: '5432'
+        - id: $$cap_db_name
+          label: Database Name
+          description: 'Name of the database.'
+          defaultValue: 'supabase'
+        - id: $$cap_jwt_expiry
+          label: JWT Expiry
+          description: 'JWT expiry in seconds.'
+          defaultValue: '1209600'
+
+    instructions:
+        start: 'Starting Supabase services.'
+        end: 'Supabase services are deployed.'
+    displayName: 'Supabase'
+    isOfficial: true
+    description: 'Supabase - The open source Firebase alternative'
+    documentation: 'https://supabase.io/docs'

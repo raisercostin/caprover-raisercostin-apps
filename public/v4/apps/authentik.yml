@@ -1,0 +1,118 @@
+---
+captainVersion: 4
+services:
+    # Server
+    $$cap_appname:
+        image: $$cap_authentik_image:$$cap_authentik_tag
+        restart: unless-stopped
+        environment:
+            AUTHENTIK_REDIS__HOST: srv-captain--$$cap_appname-redis
+            AUTHENTIK_POSTGRESQL__HOST: srv-captain--$$cap_appname-postgres
+            AUTHENTIK_POSTGRESQL__USER: $$cap_pg_user
+            AUTHENTIK_POSTGRESQL__NAME: $$cap_pg_db
+            AUTHENTIK_POSTGRESQL__PASSWORD: $$cap_pg_pass
+        volumes:
+            - $$cap_appname-media:/media
+            - $$cap_appname-custom-templates:/templates
+        caproverExtra:
+            containerHttpPort: '9000'
+            websocketSupport: 'true'
+            dockerfileLines:
+                - FROM $$cap_authentik_image:$$cap_authentik_tag
+                - CMD exec server
+        depends_on:
+            - $$cap_appname-postgres
+            - $$cap_appname-redis
+            - $$cap_appname-worker
+    # Worker
+    $$cap_appname-worker:
+        image: $$cap_authentik_image:$$cap_authentik_tag
+        restart: unless-stopped
+        environment:
+            AUTHENTIK_REDIS__HOST: srv-captain--$$cap_appname-redis
+            AUTHENTIK_POSTGRESQL__HOST: srv-captain--$$cap_appname-postgres
+            AUTHENTIK_POSTGRESQL__USER: $$cap_pg_user
+            AUTHENTIK_POSTGRESQL__NAME: $$cap_pg_db
+            AUTHENTIK_POSTGRESQL__PASSWORD: $$cap_pg_pass
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - $$cap_appname-media:/media
+            - $$cap_appname-certs:/certs
+            - $$cap_appname-custom-templates:/templates
+        depends_on:
+            - $$cap_appname-postgres
+            - $$cap_appname-redis
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM $$cap_authentik_image:$$cap_authentik_tag
+                - CMD exec worker
+    # DB
+    $$cap_appname-postgres:
+        image: postgres:$$cap_pg_image
+        volumes:
+            - $$cap_appname-postgres-data:/var/lib/postgresql/data
+        restart: always
+        environment:
+            POSTGRES_USER: $$cap_pg_user
+            POSTGRES_PASSWORD: $$cap_pg_pass
+            POSTGRES_DB: $$cap_pg_db
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+    # Redis
+    $$cap_appname-redis:
+        volumes:
+            - $$cap_appname-redis-data:/data
+        restart: always
+        caproverExtra:
+            dockerfileLines:
+                - FROM redis:$$cap_redis_version
+                - CMD exec redis-server --save 60 1 --loglevel warning
+            notExposeAsWebApp: 'true'
+
+caproverOneClickApp:
+    displayName: Authentik
+    description: Open-source authentication and authorization system
+    isOfficial: true
+    documentation: https://goauthentik.io
+    instructions:
+        start: |-
+            Authentik will start after the PostgreSQL and Redis services are successfully deployed.
+        end: |-
+            Authentik has been successfully deployed! Access it at `http://$$cap_appname.$$cap_root_domain`.
+
+    variables:
+        - id: $$cap_authentik_image
+          label: Authentik Image
+          defaultValue: 'ghcr.io/goauthentik/server'
+          validRegex: /.{1,}/
+
+        - id: $$cap_authentik_tag
+          label: Authentik Tag
+          defaultValue: '2023.10.3'
+          validRegex: /.{1,}/
+
+        - id: $$cap_pg_pass
+          label: PostgreSQL Password
+          defaultValue: $$cap_gen_random_hex(16)
+          validRegex: /^[a-f0-9]{16}$/
+
+        - id: $$cap_pg_user
+          label: PostgreSQL User
+          defaultValue: 'authentik'
+          validRegex: /.{1,}/
+
+        - id: $$cap_pg_db
+          label: PostgreSQL Database
+          defaultValue: 'authentik'
+          validRegex: /.{1,}/
+
+        - id: $$cap_pg_image
+          label: Postgres Version
+          defaultValue: '15'
+          validRegex: /^([0-9]{1,2})$/
+
+        - id: $$cap_redis_version
+          label: Redis Version
+          defaultValue: '7.2'
+          validRegex: /.{1,}/

@@ -1,0 +1,74 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        image: tuleap/tuleap-community-edition
+        volumes:
+            - $$cap_appname-tuleap-data:/data
+        restart: always
+        environment:
+            TULEAP_FQDN: https://$$cap_appname.$$cap_root_domain
+            TULEAP_SYS_DBHOST: srv-captain--$$cap_appname-db
+            TULEAP_SYS_DBPASSWD: $$cap_tuleap_sys_dbpasswd
+            SITE_ADMINISTRATOR_PASSWORD: $$cap_site_administrator_password
+            DB_ADMIN_USER: root
+            DB_ADMIN_PASSWORD: $$cap_mysql_root_password
+            TULEAP_FPM_SESSION_MODE: redis
+            TULEAP_REDIS_SERVER: redis://srv-captain--$$cap_appname-cache:6379
+        caproverExtra:
+            containerHttpPort: '80'
+            notExposeAsWebApp: 'false'
+            websocketSupport: 'true'
+        depends_on:
+            - $$cap_appname-cache
+            - $$cap_appname-db
+
+    $$cap_appname-db:
+        volumes:
+            - $$cap_appname-db-data:/var/lib/mysql
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: $$cap_mysql_root_password
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM mysql:8.0
+                - CMD mysql "--character-set-server=utf8mb4" "--collation-server=utf8mb4_unicode_ci" "--sql-mode=NO_ENGINE_SUBSTITUTION"
+
+    $$cap_appname-cache:
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+            dockerfileLines:
+                - FROM redis:$$cap_redis
+                - CMD redis-server --appendonly yes --auto-aof-rewrite-percentage 20 --auto-aof-rewrite-min-size 200kb
+        volumes:
+            - $$cap_appname-cache:/data
+
+caproverOneClickApp:
+    variables:
+        - id: $$cap_tuleap_sys_dbpasswd
+          label: Tuleap Database Password
+          description: Enter the password for the Tuleap database user.
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: $$cap_gen_random_hex(12)
+        - id: $$cap_site_administrator_password
+          label: Site Administrator Password
+          description: Enter the password for the Tuleap site administrator.
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: $$cap_gen_random_hex(12)
+        - id: $$cap_mysql_root_password
+          label: MySQL Root Password
+          description: Enter the root password for MySQL.
+          validRegex: /^[^\@]{12,}$/
+          defaultValue: $$cap_gen_random_hex(12)
+        - id: $$cap_redis
+          label: Redis Version
+          description: Select the version of Redis.
+          defaultValue: 6.2.6
+    instructions:
+        start: Tuleap is an open source tool for project management and collaboration.
+        end: Tuleap has been deployed and is available at $$cap_tuleap_fqdn.
+    displayName: Tuleap
+    isOfficial: false
+    description: Tuleap - Open Source tool for project management and collaboration.
+    documentation: 'For more information, visit https://www.tuleap.org/'

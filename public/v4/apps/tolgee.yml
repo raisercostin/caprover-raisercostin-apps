@@ -1,0 +1,129 @@
+---
+captainVersion: 4
+services:
+    # Tolgee
+    $$cap_appname:
+        image: tolgee/tolgee:$$cap_tolgee_version
+        restart: unless-stopped
+        environment:
+            TOLGEE_AUTHENTICATION_INITIAL_PASSWORD: $$cap_tolgee_initial_password
+            TOLGEE_AUTHENTICATION_INITIAL_USERNAME: $$cap_tolgee_initial_username
+            TOLGEE_AUTHENTICATION_JWT_SECRET: $$cap_tolgee_jwt_secret
+            TOLGEE_MACHINE_TRANSLATION_GOOGLE_API_KEY: $$cap_tolgee_google_api_key
+            TOLGEE_SMTP_AUTH: $$cap_tolgee_smtp_auth
+            TOLGEE_SMTP_FROM: $$cap_tolgee_smtp_from
+            TOLGEE_SMTP_HOST: $$cap_tolgee_smtp_host
+            TOLGEE_SMTP_PASSWORD: $$cap_tolgee_smtp_password
+            TOLGEE_SMTP_PORT: $$cap_tolgee_smtp_port
+            TOLGEE_SMTP_SSL_ENABLED: $$cap_tolgee_smtp_ssl
+            TOLGEE_SMTP_USERNAME: $$cap_tolgee_smtp_username
+            TOLGEE_POSTGRES_AUTOSTART_ENABLED: 'false'
+            SPRING_DATASOURCE_URL: jdbc:postgresql://$$cap_appname-db:5432/tolgee
+            SPRING_DATASOURCE_USERNAME: tolgee
+            SPRING_DATASOURCE_PASSWORD: $$cap_db_password
+        volumes:
+            - $$cap_appname-data:/data
+        depends_on:
+            - $$cap_appname-db
+        caproverExtra:
+            websocketSupport: 'true'
+            containerHttpPort: '8080'
+    # PostgreSQL Service
+    $$cap_appname-db:
+        image: postgres:13
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: tolgee
+            POSTGRES_USER: tolgee
+            POSTGRES_PASSWORD: $$cap_db_password
+        volumes:
+            - $$cap_appname-db-data:/var/lib/postgresql/data
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+caproverOneClickApp:
+    displayName: Tolgee
+    description: Open-source localization platform
+    isOfficial: true
+    documentation: https://tolgee.io
+    instructions:
+        start: |-
+            Tolgee is an all-in-one localization solution. Start managing your texts efficiently.
+        end: |-
+            Tolgee has been successfully deployed! You can access the application at `http://$$cap_appname.$$cap_root_domain`.
+    variables:
+        - id: $$cap_tolgee_version
+          label: Tolgee Version
+          defaultValue: 'latest'
+          validRegex: /.{1,}/
+
+        - id: $$cap_db_password
+          label: Database Password
+          description: Password for PostgreSQL Database.
+          defaultValue: $$cap_gen_random_hex(16)
+          validRegex: /.{1,}/
+
+        - id: $$cap_tolgee_initial_password
+          label: Initial Password
+          description: The initial password for Tolgee authentication.
+          defaultValue: $$cap_gen_random_hex(16)
+          validRegex: /^[a-f0-9]{16}$/
+
+        - id: $$cap_tolgee_initial_username
+          label: Initial Username
+          description: The initial username for Tolgee authentication.
+          defaultValue: 'admin'
+          validRegex: /.{1,}/
+
+        - id: $$cap_tolgee_jwt_secret
+          label: JWT Secret
+          description: Secret key for JWT authentication.
+          defaultValue: $$cap_gen_random_hex(64)
+          validRegex: /^[a-f0-9]{64}$/
+
+        - id: $$cap_tolgee_google_api_key
+          label: Google API Key
+          description: Google API key for machine translation.
+          defaultValue: ''
+          validRegex: /.{1,}/
+
+        - id: $$cap_tolgee_smtp_auth
+          label: SMTP Auth
+          description: SMTP authentication toggle (true or false).
+          defaultValue: 'false'
+          validRegex: /^(true|false)$/
+
+        - id: $$cap_tolgee_smtp_from
+          label: SMTP From
+          description: From address for SMTP.
+          defaultValue: 'translation@uhl.cloud'
+          validRegex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+        - id: $$cap_tolgee_smtp_host
+          label: SMTP Host
+          description: Host address for SMTP.
+          defaultValue: ''
+          validRegex: /.{1,}/
+
+        - id: $$cap_tolgee_smtp_password
+          label: SMTP Password
+          description: Password for SMTP.
+          defaultValue: ''
+          validRegex: /^([^\s^\/])+$/
+
+        - id: $$cap_tolgee_smtp_port
+          label: SMTP Port
+          description: Port number for SMTP.
+          defaultValue: '25'
+          validRegex: /^\d+$/
+
+        - id: $$cap_tolgee_smtp_ssl
+          label: SMTP SSL
+          description: Toggle for SSL in SMTP (true or false).
+          defaultValue: 'false'
+          validRegex: /^(true|false)$/
+
+        - id: $$cap_tolgee_smtp_username
+          label: SMTP Username
+          description: Username for SMTP.
+          defaultValue: ''
+          validRegex: /.{1,}/

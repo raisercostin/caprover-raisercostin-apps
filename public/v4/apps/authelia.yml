@@ -1,0 +1,28 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        image: docker.io/authelia/authelia:$$cap_authelia_version
+        volumes:
+            - $$cap_appname-config:/config
+            - $$cap_appname-secrets:/secrets
+        restart: always
+        caproverExtra:
+            containerHttpPort: '9091'
+            notExposeAsWebApp: true
+caproverOneClickApp:
+    variables:
+        - id: $$cap_authelia_version
+          label: Authelia Version
+          defaultValue: latest
+          description: Check out their Docker page for the valid tags https://hub.docker.com/r/authelia/authelia/tags
+          validRegex: /^([^\s^\/])+$/
+    instructions:
+        start: >-
+            Authelia is an open source authentication and authorization server providing 2-factor authentication and single sign-on (SSO).
+        end: >-
+            Please wait for a few minutes. Authelia is deployed and available as $$cap_appname.
+    displayName: Authelia
+    isOfficial: false
+    description: Authelia is an open source authentication and authorization server providing 2-factor authentication and single sign-on (SSO).
+    documentation: For more information, visit https://www.authelia.com/docs/

@@ -1,0 +1,54 @@
+captainVersion: 4
+services:
+    $$cap_appname-database:
+        image: postgres:alpine
+        environment:
+            POSTGRES_HOST_AUTH_METHOD: trust
+        caproverExtra:
+            containerHttpPort: '5432'
+
+    $$cap_appname-smtp:
+        image: reachfive/fake-smtp-server
+        ports:
+            - 1080:1080
+        caproverExtra:
+            containerHttpPort: '1080'
+
+    $$cap_appname-catapulte:
+        image: jdrouet/catapulte:latest
+        environment:
+            RUST_LOG: info
+            SMTP_HOSTNAME: srv-captain--$$cap_appname-smtp
+            SMTP_PORT: 1025
+            TEMPLATE_PROVIDER: jolimail
+            TEMPLATE_PROVIDER_JOLIMAIL_BASE_URL: http://srv-captain--$$cap_appname-jolimail:3000
+        depends_on:
+            - $$cap_appname-jolimail
+            - $$cap_appname-smtp
+        ports:
+            - 3010:3000
+        caproverExtra:
+            containerHttpPort: '3000'
+
+    $$cap_appname-jolimail:
+        image: jdrouet/jolimail:canary-alpine
+        environment:
+            DATABASE_URL: postgres://postgres@srv-captain--$$cap_appname-database/postgres
+            EXAMPLE_CATAPULTE_BASE_URL: http://$$cap_appname-catapulte.$$cap_root_domain
+            RUST_LOG: info
+        depends_on:
+            - $$cap_appname-database
+        ports:
+            - 8080:3000
+        caproverExtra:
+            containerHttpPort: '3000'
+            websocketSupport: 'true'
+
+caproverOneClickApp:
+    instructions:
+        start: '🚀 Jolimail is a tool for [describe functionality].'
+        end: '✅ Jolimail has been successfully deployed and can be accessed at `http://$$cap_appname.$$cap_root_domain`.'
+
+    displayName: 'Jolimail'
+    description: '📌 A brief description of Jolimail and its functionalities.'
+    documentation: '📖 Link to Jolimail documentation.'

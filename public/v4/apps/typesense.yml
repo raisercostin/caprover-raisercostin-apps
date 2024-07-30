@@ -1,0 +1,28 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        environment:
+            TYPESENSE_DATA_DIR: /data
+            TYPESENSE_API_KEY: $$cap_typesense_api_key
+        image: typesense/typesense:0.25.1
+        restart: on-failure
+        volumes:
+            - $$cap_appname-data:/data
+        caproverExtra:
+            containerHttpPort: '8108'
+            dockerfileLines:
+                - FROM typesense/typesense:0.25.1
+                - CMD ["--enable-cors"]
+caproverOneClickApp:
+    variables:
+        - id: $$cap_typesense_api_key
+          label: Typesense API Key
+          defaultValue: $$cap_gen_random_hex(16)
+    instructions:
+        start: 'Typesense is starting. Make sure to set the API key.'
+        end: 'Typesense has been deployed. Access it on port 8108.'
+    displayName: 'Typesense'
+    isOfficial: true
+    description: 'Fast, typo-tolerant search engine for building delightful search experiences'
+    documentation: 'https://typesense.org/docs/'

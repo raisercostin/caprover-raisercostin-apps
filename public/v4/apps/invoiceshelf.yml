@@ -1,0 +1,115 @@
+captainVersion: 4
+services:
+    $$cap_appname-db:
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+        image: mariadb:10
+        environment:
+            TZ: $$cap_TZ
+            MYSQL_USER: $$cap_DB_USERNAME
+            MYSQL_PASSWORD: $$cap_DB_PASSWORD
+            MYSQL_DATABASE: $$cap_DB_DATABASE
+            MYSQL_ROOT_PASSWORD: $$cap_DB_ROOT_PASSWORD
+        volumes:
+            - $$cap_appname-db-data:/var/lib/mysql
+        restart: unless-stopped
+
+    $$cap_appname-queue:
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+        image: redis:$$cap_REDIS_VERSION
+        volumes:
+            - $$cap_appname-queue:/data
+
+    $$cap_appname:
+        image: invoiceshelf/invoiceshelf
+        volumes:
+            - $$cap_appname-data:/data
+        environment:
+            APP_URL: https://$$cap_appname.$$cap_root_domain
+            DB_CONNECTION: mysql
+            DB_DATABASE: invoiceshelf
+            DB_HOST: srv-captain--$$cap_appname-db
+            DB_PASSWORD: '$$cap_DB_PASSWORD'
+            DB_PORT: 3306
+            DB_USERNAME: invoiceshelf
+            MAIL_DRIVER: smtp
+            MAIL_ENCRYPTION: tls
+            MAIL_HOST: post.uhlhosting.ch
+            MAIL_PORT: 25
+            PHP_TZ: $$cap_TZ
+            REDIS_HOST: srv-captain--$$cap_appname-queue
+            REDIS_PORT: 6379
+            STARTUP_DELAY: $$cap_startup_delay
+            TIMEZONE: $$cap_TZ
+        restart: unless-stopped
+        depends_on:
+            - $$cap_appname-db
+            - $$cap_appname-queue
+        caproverExtra:
+            containerHttpPort: 80
+            notExposeAsWebApp: false
+
+caproverOneClickApp:
+    displayName: Invoiceshelf
+    isOfficial: true # Set to true if this is an official one-click app
+    description: '📌 Invoiceshelf is an invoicing application for managing your business transactions.'
+    documentation: https://docs.invoiceshelf.com/installation.html#digital-ocean-docker
+    instructions:
+        start: |-
+            '🚀 Invoiceshelf is an invoicing application for managing your business transactions.'
+        end: |-
+            '✅ Invoiceshelf has been successfully deployed and can be accessed at `http://$$cap_appname.$$cap_root_domain`.'
+    variables:
+        - id: $$cap_app_port
+          label: Application Port
+          defaultValue: 90
+          description: 'The port for the application.'
+        - id: $$cap_MYSQL_VERSION
+          label: MySQL Version
+          defaultValue: 10
+          description: 'Version of MySQL.'
+        - id: $$cap_REDIS_VERSION
+          label: Redis Version
+          defaultValue: latest
+          description: 'Version of Redis.'
+        - id: $$cap_TZ
+          label: Timezone
+          defaultValue: UTC
+          description: 'Timezone for the application.'
+        - id: $$cap_DB_USERNAME
+          label: Database Username
+          defaultValue: invoiceshelf
+          description: 'Username for the MySQL database.'
+        - id: $$cap_DB_PASSWORD
+          label: Database Password
+          defaultValue: $$cap_gen_random_hex(16)
+          description: 'Password for the MySQL database.'
+        - id: $$cap_DB_DATABASE
+          label: Database Name
+          defaultValue: invoiceshelf
+          description: 'Name of the MySQL database.'
+        - id: $$cap_DB_ROOT_PASSWORD
+          label: MySQL Root Password
+          defaultValue: $$cap_gen_random_hex(16)
+          description: 'Root password for the MySQL database.'
+        - id: $$cap_admin_user
+          label: Admin Username
+          defaultValue: admin
+          description: 'Username for the admin user.'
+        - id: $$cap_admin_password
+          label: Admin Password
+          defaultValue: Passw0rd@
+          description: 'Password for the admin user.'
+        - id: $$cap_startup_delay
+          label: Startup Delay
+          defaultValue: 60
+          description: 'Delay in seconds before starting the application.'
+
+instructions:
+    start: '🚀 Invoiceshelf is an invoicing application for managing your business transactions.'
+    end: '✅ Invoiceshelf has been successfully deployed and can be accessed at `http://$$cap_appname.$$cap_root_domain`.'
+
+displayName: 'Invoiceshelf'
+description: '📌 Invoiceshelf is an invoicing application for managing your business transactions.'
+documentation: '📖 Link to Invoiceshelf documentation.'

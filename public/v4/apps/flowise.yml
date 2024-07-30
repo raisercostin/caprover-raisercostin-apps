@@ -1,0 +1,96 @@
+---
+captainVersion: 4
+services:
+    $$cap_appname:
+        restartPolicy: never
+        environment:
+            PORT: 3000
+            APIKEY_PATH: /root/.flowise
+            DATABASE_HOST: srv-captain--$$cap_appname-db
+            DATABASE_NAME: $$cap_database_name
+            DATABASE_PASSWORD: $$cap_database_password
+            DATABASE_PATH: /root/.flowise
+            DATABASE_PORT: $$cap_database_port
+            DATABASE_TYPE: $$cap_database_type
+            DATABASE_USER: $$cap_database_user
+            FLOWISE_PASSWORD: $$cap_flowise_password
+            FLOWISE_SECRETKEY_OVERWRITE: $$cap_flowise_secretkey_overwrite
+            FLOWISE_USERNAME: $$cap_flowise_username
+            LOG_LEVEL: $$cap_log_level
+            LOG_PATH: /root/.flowise/logs
+            SECRETKEY_PATH: /root/.flowise
+            TOOL_FUNCTION_BUILTIN_DEP: '*'
+            TOOL_FUNCTION_EXTERNAL_DEP: '*'
+        caproverExtra:
+            containerHttpPort: 3000
+            websocketSupport: 'true'
+            dockerfileLines:
+                - FROM flowiseai/flowise:$$cap_flowise_version
+                - CMD /bin/sh -c "sleep 3; flowise start"
+        volumes:
+            - $$cap_appname-db-data:/root/.flowise
+        depends_on:
+            - $$cap_appname-db
+    $$cap_appname-db:
+        image: ankane/pgvector
+        volumes:
+            - $$cap_appname-db-data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_USER: $$cap_database_user
+            POSTGRES_PASSWORD: $$cap_database_password
+            POSTGRES_DB: $$cap_database_name
+        caproverExtra:
+            notExposeAsWebApp: 'true'
+caproverOneClickApp:
+    instructions:
+        start: >-
+            Flowise is a powerful AI tool. Before you start, make sure you have all your environment variables ready to input.
+        end: >-
+            Your Flowise app is now deployed and running! Access it at `http://$$cap_appname.$$cap_root_domain`.
+    displayName: 'Flowise'
+    isOfficial: true
+    description: 'Flowise AI Tool'
+    documentation: 'https://github.com/FlowiseAI/Flowise'
+    variables:
+        - id: $$cap_flowise_version
+          label: Flowise version
+          defaultValue: '1.6.1'
+          description: Checkout their docker page for the valid tags https://hub.docker.com/r/flowiseai/flowise/tags
+          validRegex: /^([^\s^\/])+$/
+
+        - id: $$cap_flowise_username
+          label: Flowise Username
+          description: 'Your Flowise username'
+
+        - id: $$cap_flowise_password
+          label: Flowise Password
+          defaultValue: '$$cap_gen_random_hex(16)'
+          description: 'Your Flowise password'
+
+        - id: $$cap_database_type
+          label: Database Type
+          defaultValue: 'postgres'
+
+        - id: $$cap_database_port
+          label: Database Port
+          defaultValue: '5432'
+
+        - id: $$cap_database_name
+          label: Database Name
+          defaultValue: 'flowise'
+
+        - id: $$cap_database_user
+          label: Database User
+          defaultValue: 'flowise'
+
+        - id: $$cap_database_password
+          label: Database Password
+          defaultValue: '$$cap_gen_random_hex(16)'
+
+        - id: $$cap_flowise_secretkey_overwrite
+          label: Flowise Secret Key Overwrite
+          defaultValue: '$$cap_gen_random_hex(64)'
+
+        - id: $$cap_log_level
+          label: Log Level
+          defaultValue: 'info'
