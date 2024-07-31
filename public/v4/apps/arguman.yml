@@ -40,36 +40,37 @@ services:
         - RUN pip install -r requirements.txt
         - RUN python -m textblob.download_corpora
         - >-
-            RUN echo "
-            # see https://github.com/arguman/arguman.org/blob/master/web/main/settings_local.py.ex \n2
-            DEFAULT_FROM_EMAIL = 'info@arguman.org' \n2
-            POSTMARK_TOKEN = 'xyz' \n2
-            POSTMARK_API_URL = "https://api.postmarkapp.com/email" \n2
-            # \n2
-            # \n2
-            DATABASES = { \n2
-            'default': { \n2
-            'ENGINE': 'django.db.backends.postgresql_psycopg2', \n2
-            'NAME': 'postgres', \n2
-            'USER': 'postgres', \n2
-            'HOST': 'db', \n2
-            'PORT': 5432, \n2
-            } \n2
-            } \n2
-            ALLOWED_HOSTS = ['*'] \n2
-            DEBUG = True \n2
-            # \n2
-            SERVER_EMAIL = 'info@arguman.org' \n2
-            BASE_DOMAIN = 'localhost:8000' #your docker machine ip if running on virtual server \n2
-            MONGODB_HOST = 'mongodbhost' #your docker machine ip if running on virtual server \n2
-            # CACHES = { \n2
-            #     "default": { \n2
-            #         "BACKEND": "redis_cache.cache.RedisCache", \n2
-            #         "LOCATION": "127.0.0.1:6379:1" \n2
-            #     } \n2
-            # } \n2
-            " | sed "s/\\n2/\n/g" >web/main/settings_local.py
-          # - RUN echo $full_Script >> settings_local.py
+          RUN echo "
+          # see https://github.com/arguman/arguman.org/blob/master/web/main/settings_local.py.ex EOL
+          DEFAULT_FROM_EMAIL = 'info@arguman.org' EOL
+          POSTMARK_TOKEN = 'xyz' EOL
+          POSTMARK_API_URL = 'https://api.postmarkapp.com/email' EOL
+          # EOL
+          # EOL
+          DATABASES = { EOL
+          'default': { EOL
+          'ENGINE': 'django.db.backends.postgresql_psycopg2', EOL
+          'NAME': 'postgres', EOL
+          'USER': 'postgres', EOL
+          'HOST': 'db', EOL
+          'PORT': 5432, EOL
+          } EOL
+          } EOL
+          ALLOWED_HOSTS = ['*'] EOL
+          DEBUG = True EOL
+          # EOL
+          SERVER_EMAIL = 'info@arguman.org' EOL
+          BASE_DOMAIN = 'localhost:8000' #your docker machine ip if running on virtual server EOL
+          MONGODB_HOST = 'mongodbhost' #your docker machine ip if running on virtual server EOL
+          # CACHES = { EOL
+          #     "default": { EOL
+          #         "BACKEND": "redis_cache.cache.RedisCache", EOL
+          #         "LOCATION": "127.0.0.1:6379:1" EOL
+          #     } EOL
+          # } EOL
+          " |  sed "s/EOL /\n/g" >web/main/settings_local.py
+        #" >web/main/settings_local.py
+        # - RUN echo $full_Script >> settings_local.py
         - RUN echo settings_local.py is && cat web/main/settings_local.py
         - RUN python web/manage.py migrate
         - EXPOSE 8000
