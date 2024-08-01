@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: $$cap_POSTGRES_PASSWORD
       POSTGRES_USER: $$cap_POSTGRES_USER
     volumes:
-      - $$cap_appname-db:/var/lib/postgresql/data
+      - $$cap_POSTGRES_PATH:/var/lib/postgresql/data
     caproverExtra:
       notExposeAsWebApp: 'true'
 
@@ -31,29 +31,29 @@ services:
       - $$cap_appname-mongodb
       - $$cap_appname-db
     restart: always
-    #environment:
+    # environment2:
       #https://stackoverflow.com/questions/31746182/docker-compose-wait-for-container-x-before-starting-y
       ## Add the wait script to the image
       #to add to docker to wait COPY --from=ghcr.io/ufoscout/docker-compose-wait:latest /wait /wait
-      #WAIT_HOSTS: srv-captain--$$cap_appname-mongodb:27017
       # WAIT_HOSTS: srv-captain--arg-44-mongodb
     environment:
-      - DEFAULT_FROM_EMAIL=new_email@example.com
-      - POSTMARK_TOKEN=new_token
-      - POSTMARK_API_URL=https://new.api.url
-      - DB_ENGINE=django.db.backends.postgresql_psycopg2
-      - DB_NAME=new_db_name
-      - DB_USER=new_db_user
-      - DB_PASSWORD=new_db_password
-      - DB_HOST=new_db_host
-      - DB_PORT=5432
-      - ALLOWED_HOSTS=localhost,example.com
-      - DEBUG=False
-      - SERVER_EMAIL=server_email@example.com
-      - BASE_DOMAIN=new_domain:8000
-      - MONGODB_HOST=new_mongodb_host
-      - CACHE_BACKEND=new_cache_backend
-      - CACHE_LOCATION=new_cache_location
+      WAIT_HOSTS: srv-captain--$$cap_appname-mongodb:27017
+      DEFAULT_FROM_EMAIL: new_email@example.com
+      POSTMARK_TOKEN: new_token
+      POSTMARK_API_URL: https://new.api.url
+      DB_ENGINE: django.db.backends.postgresql_psycopg2
+      DB_NAME: new_db_name
+      DB_USER: new_db_user
+      DB_PASSWORD: new_db_password
+      DB_HOST: new_db_host
+      DB_PORT: 5432
+      ALLOWED_HOSTS: localhost,example.com
+      DEBUG: False
+      SERVER_EMAIL: server_email@example.com
+      BASE_DOMAIN: new_domain:8000
+      MONGODB_HOST: new_mongodb_host
+      CACHE_BACKEND: new_cache_backend
+      CACHE_LOCATION: new_cache_location
     caproverExtra:
       #dockerFilepath: arguman/Dockerfile
       # see https://github.com/caprover/one-click-apps/blob/master/public/v4/apps/pocketbase.yml
@@ -78,43 +78,54 @@ services:
         - RUN pip install -r requirements.txt
         - RUN python -m textblob.download_corpora
         - >-
-          RUN echo "
+          RUN echo "EOL
           import os EOL
           # see https://github.com/arguman/arguman.org/blob/master/web/main/settings_local.py.ex EOL
-          DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'info@arguman.org') EOL
-          POSTMARK_TOKEN = os.getenv('POSTMARK_TOKEN', 'xyz') EOL
-          POSTMARK_API_URL = os.getenv('POSTMARK_API_URL', 'https://api.postmarkapp.com/email') EOL
           # EOL
           # EOL
           DATABASES = { EOL
           'default': { EOL
           'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql_psycopg2'), EOL
-          'NAME': os.getenv('DB_NAME', 'postgres'), EOL
-          'USER': os.getenv('DB_USER', 'postgres'), EOL
-          'PASSWORD': os.getenv('DB_PASSWORD', ''), EOL
-          'HOST': os.getenv('DB_HOST', 'db'), EOL
+          'NAME': os.getenv('DB_NAME', '$$cap_POSTGRES_DB'), EOL
+          'USER': os.getenv('DB_USER', '$$cap_POSTGRES_USER'), EOL
+          'PASSWORD': os.getenv('DB_PASSWORD', '$$cap_POSTGRES_USER'), EOL
+          'HOST': os.getenv('DB_HOST', 'srv-captain--$$cap_appname-db'), EOL
           'PORT': int(os.getenv('DB_PORT', 5432)), EOL
           } EOL
           } EOL
-          ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',') EOL
-          DEBUG = os.getenv('DEBUG', 'True') == 'True' EOL
-          # EOL
-          SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'info@arguman.org') EOL
-          BASE_DOMAIN = os.getenv('BASE_DOMAIN', 'localhost:8000') #your docker machine ip if running on virtual server EOL
-          MONGODB_HOST = os.getenv('MONGODB_HOST', 'srv-captain--$$cap_appname-mongodb') #your docker machine ip if running on virtual server EOL
           # CACHES = { EOL
-          #     "default": { EOL
-          #         "BACKEND": os.getenv('CACHE_BACKEND', "redis_cache.cache.RedisCache"), EOL
-          #         "LOCATION": "LOCATION": os.getenv('CACHE_LOCATION', "127.0.0.1:6379:1") EOL
+          #     'default': { EOL
+          #         'BACKEND': os.getenv('CACHE_BACKEND', 'redis_cache.cache.RedisCache'), EOL
+          #         'LOCATION': 'LOCATION': os.getenv('CACHE_LOCATION', "127.0.0.1:6379:1") EOL
           #     } EOL
           # } EOL
+          POSTMARK_TOKEN = os.getenv('POSTMARK_TOKEN', 'xyz') EOL
+          POSTMARK_API_URL = os.getenv('POSTMARK_API_URL', 'https://api.postmarkapp.com/email') EOL
+          DEBUG = os.getenv('DEBUG', 'True') == 'True' EOL
+          ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',') EOL
+          # EOL
+          DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '$$cap_email') EOL
+          SERVER_EMAIL = os.getenv('SERVER_EMAIL', '$$cap_email') EOL
+          MONGODB_HOST = os.getenv('MONGODB_HOST', 'srv-captain--$$cap_appname-mongodb') #your docker machine ip if running on virtual server EOL
+          BASE_DOMAIN = os.getenv('BASE_DOMAIN', '$$cap_appname.$$cap_root_domain') #your docker machine ip if running on virtual server EOL
+          PREVENT_LANGUAGE_REDIRECTION = True EOL
+          SECRET_KEY = os.getenv('SECRET_KEY', '$$cap_secret_key') EOL
+          SITE_URL = '$$cap_appname.$$cap_root_domain' EOL
+          BASE_DOMAIN = '$$cap_appname.$$cap_root_domain' EOL
+          BLOG_FEED_TITLE = '$$cap_appname.$$cap_root_domain Blog' EOL
+          BLOG_FEED_DESCRIPTION = 'Arguman analytical platform' EOL
+          BLOG_URL = '$$cap_appname.$$cap_root_domain/blog' EOL
           " |  sed "s/EOL /\n/g" >web/main/settings_local.py # The space after EOL is generated by yaml when process this multiline string
         #" >web/main/settings_local.py
         # - RUN echo $full_Script >> settings_local.py
         - RUN echo settings_local.py is && cat web/main/settings_local.py
-        #- RUN python web/manage.py migrate
+        - RUN python web/manage.py migrate
+        #instead of - RUN python web/manage.py createsuperuser --username=raiser --email=raisercostin@gmail.com --verbosity=3 --no-color --noinput
+        - RUN echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$$cap_django_superuser_username', '$$cap_django_superuser_password', '@cap_django_superuser_password')" | python web/manage.py shell
         - EXPOSE 8000
         - CMD ["python", "web/manage.py","runserver","0.0.0.0:8000"]
+        #forced success and wait to connect `docker exec -it srv-captain--$$cap_appname`
+        #- CMD ["tail", "-f", "/dev/null"]
       containerHttpPort: '8000'
     volumes:
       - '$$cap_appname-data:/code'
@@ -161,6 +172,36 @@ caproverOneClickApp:
     description: Password of the database user.
     defaultValue: $$cap_gen_random_hex(16)
     validRegex: /.{1,}/
+  - id: $$cap_POSTGRES_PATH
+    label: PostgreSQL | Path
+    description: The volume for postgres. If is relative will be a normal volume at (in host at /var/lib/docker/volumes/$$cap_appname-db/_data), if is absolute is in host volume (can be something like /captain/data/$$cap_appname-db). Important for backups.
+    defaultValue: ''
+    validRegex: /.{1,}/
+  - id: $$cap_secret_key
+    label: Django Secret Key
+    description: Secret key for signing https://docs.djangoproject.com/en/5.0/topics/signing/
+    defaultValue: $$cap_gen_random_hex(64)
+    validRegex: /.{1,}/
+  - id: $$cap_email
+    label: Server Email
+    description: Admin email.
+    defaultValue: ''
+    validRegex: /.{1,}/
+  - id: $$cap_django_superuser_username
+    label: Django Superuser Username
+    description: Superuser - see https://django.readthedocs.io/en/1.7.x/intro/tutorial02.html
+    defaultValue: admin
+    validRegex: /.{1,}/
+  - id: $$cap_django_superuser_email
+    label: Django Superuser Email
+    description: Superuser Email - see https://django.readthedocs.io/en/1.7.x/intro/tutorial02.html
+    defaultValue: ''
+    validRegex: /.{1,}/
+  - id: $$cap_django_superuser_password
+    label: Django Superuser Password
+    description: Superuser Password - see https://django.readthedocs.io/en/1.7.x/intro/tutorial02.html
+    defaultValue: $$cap_gen_random_hex(64)
+    validRegex: /.{1,}/
   instructions:
     start: >-
       More details on https://github.com/arguman/arguman.org
@@ -179,6 +220,7 @@ caproverOneClickApp:
       That's it!
 
       You can access the dashboard at `http://$$cap_appname.$$cap_root_domain`
+      Django admin site at http://$$cap_appname.$$cap_root_domain/admin/
 
 
       Aaaand you're done! 😄
