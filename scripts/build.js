@@ -1,6 +1,7 @@
 const path = require('path');
 const yaml = require('yaml');
 const fs = require('fs-extra');
+const { log } = require('console');
 
 // Define folder paths.
 const PUBLIC_FOLDER = path.join(__dirname, '..', 'public');
@@ -16,6 +17,7 @@ const LOGOS_FOLDER = path.join(SOURCE_FOLDER, 'logos');
  * @returns {Promise<Object>} Parsed content of the YAML file.
  */
 async function readYamlFile(filePath) {
+  // log(`Reading file: ${filePath}`);
   const contentString = await fs.readFile(filePath, 'utf-8');
   return yaml.parse(contentString);
 }
@@ -38,7 +40,9 @@ async function makeAppList(appFilenames) {
   const properAppFiles = appFilenames.filter((file) => file.endsWith('.yml'));
 
   if (properAppFiles.length !== appFilenames.length) {
-    throw new Error('Hey! Everything in v4 needs that .yml extension.');
+    const diff = appFilenames.filter((x) => !properAppFiles.includes(x));
+    console.warn('Some files in the apps folder are not YAML files or do not have v4 version:', diff);
+    //throw new Error('Hey! Everything in v4 needs that .yml extension.');
   }
 
   const appDetails = [];
@@ -79,8 +83,8 @@ async function makeAppList(appFilenames) {
 async function buildDist() {
   try {
     const appFilenames = await fs.readdir(APPS_FOLDER);
-
-    for (const filename of appFilenames) {
+    const properAppFiles = appFilenames.filter((file) => file.endsWith('.yml'));
+    for (const filename of properAppFiles) {
       const filePath = path.join(APPS_FOLDER, filename);
       const content = await readYamlFile(filePath);
 
