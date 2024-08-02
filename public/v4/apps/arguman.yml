@@ -8,7 +8,7 @@ services:
   $$cap_appname-mongodb:
     image: mongo:$$cap_mongo_version
     volumes:
-      - $$cap_appname-db-data:/data/db
+      - $$cap_appname-mongodbdb-data:/data/db
     restart: always
     # ports:
     #   - '27017:27017'
@@ -21,12 +21,15 @@ services:
       POSTGRES_PASSWORD: $$cap_POSTGRES_PASSWORD
       POSTGRES_USER: $$cap_POSTGRES_USER
     volumes:
-      - $$cap_POSTGRES_PATH:/var/lib/postgresql/data
+      - $$cap_appname-db-data:/var/lib/postgresql/data
     caproverExtra:
       notExposeAsWebApp: 'true'
 
   $$cap_appname:
     #   - $$cap_appname-redis
+    tags:
+      - backend
+      - django
     depends_on:
       - $$cap_appname-mongodb
       - $$cap_appname-db
@@ -37,23 +40,31 @@ services:
       #to add to docker to wait COPY --from=ghcr.io/ufoscout/docker-compose-wait:latest /wait /wait
       # WAIT_HOSTS: srv-captain--arg-44-mongodb
     environment:
-      WAIT_HOSTS: srv-captain--$$cap_appname-mongodb:27017
-      DEFAULT_FROM_EMAIL: new_email@example.com
+      DEFAULT_FROM_EMAIL: $$cap_email
       POSTMARK_TOKEN: new_token
-      POSTMARK_API_URL: https://new.api.url
+      POSTMARK_API_URL: https://api.postmarkapp.com/email
       DB_ENGINE: django.db.backends.postgresql_psycopg2
-      DB_NAME: new_db_name
-      DB_USER: new_db_user
-      DB_PASSWORD: new_db_password
-      DB_HOST: new_db_host
+      DB_NAME: $$cap_POSTGRES_DB
+      DB_USER: $$cap_POSTGRES_USER
+      DB_PASSWORD: $$cap_POSTGRES_PASSWORD
+      DB_HOST: srv-captain--$$cap_appname-db
       DB_PORT: 5432
-      ALLOWED_HOSTS: localhost,example.com
+      ALLOWED_HOSTS: "*"
       DEBUG: False
-      SERVER_EMAIL: server_email@example.com
-      BASE_DOMAIN: new_domain:8000
-      MONGODB_HOST: new_mongodb_host
-      CACHE_BACKEND: new_cache_backend
-      CACHE_LOCATION: new_cache_location
+      SERVER_EMAIL: $$cap_email
+      BASE_DOMAIN: $$cap_appname.$$cap_root_domain
+      MONGODB_HOST: srv-captain--$$cap_appname-mongodb
+      CACHE_BACKEND: redis_cache.cache.RedisCache
+      CACHE_LOCATION: "127.0.0.1:6379:1"
+      PREVENT_LANGUAGE_REDIRECTION: True
+      SECRET_KEY: $$cap_secret_key
+      SITE_URL: $$cap_appname.$$cap_root_domain
+      WAIT_HOSTS: srv-captain--$$cap_appname-mongodb:27017, srv-captain--$$cap_appname-db:5432
+      BLOG_FEED_TITLE: $$cap_appname.$$cap_root_domain Blog
+      BLOG_FEED_DESCRIPTION: Arguman analytical platform
+      BLOG_URL: $$cap_appname.$$cap_root_domain/blog
+      DJANGO_SUPERUSER_USERNAME: $$cap_django_superuser_username
+      DJANGO_SUPERUSER_PASSWORD: $$cap_django_superuser_password
     caproverExtra:
       #dockerFilepath: arguman/Dockerfile
       # see https://github.com/caprover/one-click-apps/blob/master/public/v4/apps/pocketbase.yml
@@ -88,7 +99,7 @@ services:
           'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql_psycopg2'), EOL
           'NAME': os.getenv('DB_NAME', '$$cap_POSTGRES_DB'), EOL
           'USER': os.getenv('DB_USER', '$$cap_POSTGRES_USER'), EOL
-          'PASSWORD': os.getenv('DB_PASSWORD', '$$cap_POSTGRES_USER'), EOL
+          'PASSWORD': os.getenv('DB_PASSWORD', '$$cap_POSTGRES_PASSWORD'), EOL
           'HOST': os.getenv('DB_HOST', 'srv-captain--$$cap_appname-db'), EOL
           'PORT': int(os.getenv('DB_PORT', 5432)), EOL
           } EOL
@@ -108,24 +119,51 @@ services:
           SERVER_EMAIL = os.getenv('SERVER_EMAIL', '$$cap_email') EOL
           MONGODB_HOST = os.getenv('MONGODB_HOST', 'srv-captain--$$cap_appname-mongodb') #your docker machine ip if running on virtual server EOL
           BASE_DOMAIN = os.getenv('BASE_DOMAIN', '$$cap_appname.$$cap_root_domain') #your docker machine ip if running on virtual server EOL
-          PREVENT_LANGUAGE_REDIRECTION = True EOL
+          PREVENT_LANGUAGE_REDIRECTION = os.getenv('PREVENT_LANGUAGE_REDIRECTION', True) EOL
           SECRET_KEY = os.getenv('SECRET_KEY', '$$cap_secret_key') EOL
-          SITE_URL = '$$cap_appname.$$cap_root_domain' EOL
-          BASE_DOMAIN = '$$cap_appname.$$cap_root_domain' EOL
-          BLOG_FEED_TITLE = '$$cap_appname.$$cap_root_domain Blog' EOL
-          BLOG_FEED_DESCRIPTION = 'Arguman analytical platform' EOL
-          BLOG_URL = '$$cap_appname.$$cap_root_domain/blog' EOL
+          SITE_URL = os.getenv('SITE_URL', '$$cap_appname.$$cap_root_domain') EOL
+          BASE_DOMAIN = os.getenv('BASE_DOMAIN', '$$cap_appname.$$cap_root_domain') EOL
+          BLOG_FEED_TITLE = os.getenv('BLOG_FEED_TITLE', '$$cap_appname.$$cap_root_domain Blog') EOL
+          BLOG_FEED_DESCRIPTION = os.getenv('BLOG_FEED_DESCRIPTION', 'Arguman analytical platform') EOL
+          BLOG_URL = os.getenv('BLOG_URL', '$$cap_appname.$$cap_root_domain/blog') EOL
+          DJANGO_SUPERUSER_USERNAME = os.getenv('DJANGO_SUPERUSER_USERNAME', '$$cap_django_superuser_username') EOL
+          DJANGO_SUPERUSER_PASSWORD = os.getenv('DJANGO_SUPERUSER_PASSWORD', '$$cap_django_superuser_password') EOL
           " |  sed "s/EOL /\n/g" >web/main/settings_local.py # The space after EOL is generated by yaml when process this multiline string
         #" >web/main/settings_local.py
         # - RUN echo $full_Script >> settings_local.py
         - RUN echo settings_local.py is && cat web/main/settings_local.py
-        - RUN python web/manage.py migrate
-        #instead of - RUN python web/manage.py createsuperuser --username=raiser --email=raisercostin@gmail.com --verbosity=3 --no-color --noinput
-        - RUN echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$$cap_django_superuser_username', '$$cap_django_superuser_password', '@cap_django_superuser_password')" | python web/manage.py shell
+        - ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.5.0/wait /wait
+        - RUN chmod +x /wait
+        #- ENV WAIT_HOSTS=srv-captain--$$cap_appname-mongodb:27017
+        - >-
+          RUN echo "#!/bin/sh EOL
+          /wait EOL
+          #echo django - collectstatic EOL
+          #python web/manage.py collectstatic --no-input EOL
+          echo django - migrate EOL
+          python web/manage.py migrate EOL
+          echo django - createsuperuser EOL
+          echo \"from django.contrib.auth import get_user_model;import os; User = get_user_model();
+          User.objects.create_superuser(os.getenv('DJANGO_SUPERUSER_USERNAME', '$$cap_django_superuser_username'),
+          '$$cap_django_superuser_email', os.getenv('DJANGO_SUPERUSER_PASSWORD', '$$cap_django_superuser_password'));
+          user = User.objects.get(username='your_superuser_username');
+          user.email = os.getenv('DJANGO_SUPERUSER_USERNAME', '$$cap_django_superuser_username');
+          user.set_password(os.getenv('DJANGO_SUPERUSER_PASSWORD', '$$cap_django_superuser_password'));
+          user.save();
+          \" | python web/manage.py shell EOL
+          echo django - runserver EOL
+          python web/manage.py runserver 0.0.0.0:8000 EOL
+          " |  sed "s/EOL /\n/g" >runserver.sh && chmod +x runserver.sh
+        # The space after EOL is generated by yaml when process this multiline string
         - EXPOSE 8000
-        - CMD ["python", "web/manage.py","runserver","0.0.0.0:8000"]
+        # - RUN /wait
+        # - RUN python web/manage.py migrate
+        #instead of - RUN python web/manage.py createsuperuser --username=raiser --email=raisercostin@gmail.com --verbosity=3 --no-color --noinput
+        #- RUN echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$$cap_django_superuser_username', '$$cap_django_superuser_email', '$$cap_django_superuser_password')" | python web/manage.py shell
+        #- CMD ["python", "web/manage.py","runserver","0.0.0.0:8000"]
         #forced success and wait to connect `docker exec -it srv-captain--$$cap_appname`
         #- CMD ["tail", "-f", "/dev/null"]
+        - CMD ["sh", "./runserver.sh"]
       containerHttpPort: '8000'
     volumes:
       - '$$cap_appname-data:/code'
@@ -172,11 +210,11 @@ caproverOneClickApp:
     description: Password of the database user.
     defaultValue: $$cap_gen_random_hex(16)
     validRegex: /.{1,}/
-  - id: $$cap_POSTGRES_PATH
-    label: PostgreSQL | Path
-    description: The volume for postgres. If is relative will be a normal volume at (in host at /var/lib/docker/volumes/$$cap_appname-db/_data), if is absolute is in host volume (can be something like /captain/data/$$cap_appname-db). Important for backups.
-    defaultValue: ''
-    validRegex: /.{1,}/
+  # - id: $$cap_POSTGRES_PATH
+  #   label: PostgreSQL | Path
+  #   description: The volume for postgres. If is relative will be a normal volume at (in host at /var/lib/docker/volumes/$$cap_appname-db/_data), if is absolute is in host volume (can be something like /captain/data/$$cap_appname-db). Important for backups.
+  #   defaultValue: ''
+  #   validRegex: /.{1,}/
   - id: $$cap_secret_key
     label: Django Secret Key
     description: Secret key for signing https://docs.djangoproject.com/en/5.0/topics/signing/
@@ -205,6 +243,10 @@ caproverOneClickApp:
   instructions:
     start: >-
       More details on https://github.com/arguman/arguman.org
+
+      Settings at
+        https://github.com/arguman/arguman.org/blob/master/web/main/settings.py
+
     end: >-
       Arguman has been successfully deployed! It might take few moments before it's fully started.
 
@@ -214,8 +256,8 @@ caproverOneClickApp:
 
       1. Access your server via SSH
       2. Execute following command to trigger database migrations:
-         - `docker exec -it $(docker ps --filter name=srv-captain--$$cap_appname-api -q) python manage.py migrate`
-         - `docker exec -it $(docker ps --filter name=srv-captain--$$cap_appname-api -q) python manage.py createsuperuser`
+         - `docker exec -it $(docker ps --filter "name=srv-captain--$$cap_appname\." -q) python web/manage.py migrate`
+         - `docker exec -it $(docker ps --filter "name=srv-captain--$$cap_appname\." -q) python web/manage.py createsuperuser`
 
       That's it!
 
@@ -230,6 +272,7 @@ caproverOneClickApp:
   description: Arguman is a platform for creating and sharing structured arguments.
   documentation: >-
     Originaly at https://arguman.org but the english database got lost.
+
 
 
 # {
