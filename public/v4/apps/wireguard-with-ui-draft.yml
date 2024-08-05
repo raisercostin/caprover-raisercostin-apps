@@ -48,10 +48,10 @@ services:
             - SYS_MODULE
 
 caproverOneClickApp:
-    displayName: WireGuard
+    displayName: WireGuard with UI (Draft)
     isOfficial: false
     description: Fast, modern, secure VPN tunnel
-    documentation: https://www.wireguard.com/
+    documentation: https://www.wireguard.com/ https://github.com/ngoduykhanh/wireguard-ui
     instructions:
         start: |-
             WireGuard is a fast, modern, and secure VPN tunnel.
