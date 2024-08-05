@@ -25,6 +25,27 @@ services:
         cap_add:
             - NET_ADMIN
             - SYS_MODULE
+    $$cap_appname-ui:
+        caproverExtra:
+            containerHttpPort: 5000
+        image: ngoduykhanh/wireguard-ui:$$cap_WIREGUARD_UI_VERSION
+        hostname: $$cap_appname-ui.$$cap_root_domain
+        environment:
+            SENDGRID_API_KEY:
+            EMAIL_FROM_ADDRESS:
+            EMAIL_FROM_NAME:
+            SESSION_SECRET:
+            WGUI_USERNAME: $$cap_WGUI_USERNAME
+            WGUI_PASSWORD: $$cap_WGUI_PASSWORD
+            WG_CONF_TEMPLATE: $$cap_gen_random_hex(64)
+            WGUI_MANAGE_START: true
+            WGUI_MANAGE_RESTART: true
+        volumes:
+            - $$cap_appname:/etc/wireguard
+            - $$cap_appname-ui-db:/app/db
+        cap_add:
+            - NET_ADMIN
+            - SYS_MODULE
 
 caproverOneClickApp:
     displayName: WireGuard
@@ -40,6 +61,8 @@ caproverOneClickApp:
             - You may need to **override CapRover's configuration** to use the newer Docker API version `1.4.1` (this can be done manually or by running `echo "{\"dockerApiVersion\":\"v1.41\"}" > /captain/data/config-override.json` and restarting CapRover with `docker service update captain-captain --force`)
             - You need **access via SSH** to your server after deployment to modify a file (only once)
             - You may need to **open the port** `51820` on your firewall
+
+            Wireguard UI is also deployed with the app. See https://github.com/ngoduykhanh/wireguard-ui for more information.
         end: |-
             WireGuard has been deployed **successfully**!
             Before you can start using it, you need to perform some steps.
@@ -52,6 +75,8 @@ caproverOneClickApp:
             5. Access via SSH to your server and execute one of the following commands to get a peer config:
             - `docker exec -it $(docker ps --filter name=srv-captain--$$cap_appname -q) cat /config/peer1/peer1.conf` (for the first peer)
             - `docker exec -it $(docker ps --filter name=srv-captain--$$cap_appname -q) /app/show-peer 1 4 5` (for the QR code of the peers 1, 4 and 5)
+
+            Wireguard UI is also deployed with the app. You can access it at `http://$$cap_appname-ui.$$cap_root_domain`. See https://github.com/ngoduykhanh/wireguard-ui for more information.
     variables:
         - id: $$cap_WIREGUARD_VERSION
           label: General | Version Tag
@@ -123,3 +148,19 @@ caproverOneClickApp:
           description: The log confs to use for the peers
           defaultValue: true
           validRegex: /.{1,}/
+        - id: $$cap_WIREGUARD_UI_VERSION
+          label: UI | Version Tag
+          description: Check out their valid tags at https://hub.docker.com/r/ngoduykhanh/wireguard-ui/tags
+          defaultValue: 0.6.2
+          validRegex: /.{1,}/
+        - id: $$cap_WGUI_USERNAME
+          label: UI | Username
+          description: The username to use for the WireGuard UI
+          defaultValue: admin
+          validRegex: /.{1,}/
+        - id: $$cap_WGUI_PASSWORD
+          label: UI | Password
+          description: The password to use for the WireGuard UI
+          defaultValue: $$cap_gen_random_hex(64)
+          validRegex: /.{1,}/
+
