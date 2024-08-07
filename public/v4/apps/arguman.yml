@@ -94,7 +94,7 @@ services:
             && rm -rf /var/lib/apt/lists/*
         - >-
             RUN
-            echo Change this to invalidate cache: v1 &&
+            echo Change this to invalidate cache: v3 &&
             git clone https://github.com/raisercostin/arguman.git . &&
             ls -al .
         - RUN pip install -r requirements.txt
@@ -305,16 +305,13 @@ caproverOneClickApp:
   instructions:
     start: >-
       Arguman is a platform for creating and sharing structured arguments.
-
-      - Initially it was at <arguman.org> but the english database got lost.
+      - Initially it was at https://arguman.org but the english database got lost.
         - Code: https://github.com/arguman/arguman.org
-      - Now is at <arguman.namekis.com>
+      - Now is at https://arguman.namekis.com
         - Code: https://github.com/raisercostin/arguman
-
       Settings documentation at
         - https://github.com/raisercostin/arguman/blob/master/web/main/settings.py
         - https://github.com/raisercostin/arguman/blob/master/web/main/settings_local.py.ex
-
     end: >-
       Arguman has been successfully deployed! It might take few moments before it's fully started.
 
