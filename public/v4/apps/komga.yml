@@ -1,0 +1,33 @@
+captainVersion: 4
+services:
+    $$cap_appname:
+        image: gotson/komga:$$cap_komga_version
+        restart: always
+        environment:
+            TZ: $$cap_tz
+        volumes:
+            - $$cap_appname-config:/config
+            - $$cap_appname-data:/data
+        ports:
+            - "25600:25600"
+        caproverExtra:
+            containerHttpPort: '25600'
+caproverOneClickApp:
+    variables:
+        - id: $$cap_tz
+          label: Timezone
+          defaultValue: "Etc/UTC"
+          description: "Timezone used by Komga."
+          validRegex: /^[^\s]+$/
+        - id: $$cap_komga_version
+          label: Komga Version
+          defaultValue: "latest"
+          description: "Choose version from https://hub.docker.com/r/gotson/komga or https://ghcr.io/gotson/komga"
+          validRegex: /^[^\s]+$/
+    instructions:
+        start: Deploying Komga service...
+        end: Komga is deployed and available.
+    displayName: Komga
+    isOfficial: false
+    description: Komga is a self-hosted comics/mangas server
+    documentation: https://github.com/gotson/komga
