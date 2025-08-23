@@ -102,7 +102,7 @@ services:
 
                 - job_name: immich_microservices
                     static_configs:
-                    - targets: ['srv-captain--$$cap_appname-machine-learning:8082']
+                    - targets: ['srv-captain--$$cap_appname:8082']
                 EOF
                 sleep 10
         volumes:
@@ -121,12 +121,58 @@ services:
         depends_on:
             - $$cap_appname-prometheus-init
 
+    $$cap_appname-grafana-init:
+        image: alpine:3
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        command:
+            - /bin/sh
+            - -c
+            - |
+                mkdir -p /mnt/grafana/provisioning/datasources
+                mkdir -p /mnt/grafana/provisioning/dashboards
+                mkdir -p /mnt/grafana/dashboards
+
+                # Write Prometheus datasource provisioning
+                cat > /mnt/grafana/provisioning/datasources/datasource.yaml <<'EOF'
+                apiVersion: 1
+                datasources:
+                  - name: Prometheus
+                    type: prometheus
+                    access: proxy
+                    url: http://srv-captain--$$cap_appname-prometheus:9090
+                    isDefault: true
+                EOF
+
+                # Write dashboards provisioning config
+                cat > /mnt/grafana/provisioning/dashboards/immich-overview.yaml <<'EOF'
+                apiVersion: 1
+                providers:
+                  - name: 'immich-overview'
+                    orgId: 1
+                    folder: ''
+                    type: file
+                    disableDeletion: false
+                    updateIntervalSeconds: 10
+                    options:
+                      path: /var/lib/grafana/dashboards
+                EOF
+
+                # Download Immich Overview dashboard JSON
+                wget -O /mnt/grafana/dashboards/immich-overview.json https://grafana.com/api/dashboards/22555/revisions/1/download
+
+                sleep 10
+        volumes:
+            - $$cap_appname-grafana-config:/mnt/grafana
+
     $$cap_appname-grafana:
         image: grafana/grafana:$$cap_grafana_version
         restart: always
         caproverExtra:
             notExposeAsWebApp: "true"
             containerHttpPort: 3000
+        depends_on:
+            - $$cap_appname-grafana-init
         ports:
             - 3001:3000
         volumes:
@@ -158,8 +204,6 @@ caproverOneClickApp:
             - Visit Prometheus (port 9090) or Grafana (port 3001) from your CapRover dashboard.
             - Grafana connects to Prometheus at: `http://srv-captain--$$cap_appname-prometheus:9090`.
             - To see raw service metrics, you can expose metrics ports by uncommenting the relevant `ports:` and environment variables for Immich services:
-            - For server: add `8081:8081` and set `IMMICH_API_METRICS_PORT=8081`
-            - For machine learning: add `8082:8082` and set `IMMICH_MICROSERVICES_METRICS_PORT=8082`
             - More about env variables at https://immich.app/docs/install/environment-variables/#general
             - Then visit `/metrics` on those ports.
 
