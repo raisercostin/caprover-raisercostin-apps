@@ -7,8 +7,6 @@ services:
         image: ghcr.io/immich-app/immich-server:$$cap_version
         ports:
             - 2283:2283
-            # Uncomment for Prometheus metrics endpoint:
-            - 8081:8081
         # extends:
         #   file: hwaccel.transcoding.yml
         #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -20,10 +18,11 @@ services:
             REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
             UPLOAD_LOCATION: /data
             IMMICH_MACHINE_LEARNING_URL: http://srv-captain--$$cap_appname-machine-learning:3003
-            # For Prometheus metrics support:
-            IMMICH_API_METRICS_PORT: 8081
             IMMICH_LOG_LEVEL: log
             DB_SKIP_MIGRATIONS: 'false'
+            IMMICH_API_METRICS_PORT: 8081
+            IMMICH_MICROSERVICES_METRICS_PORT: 8082
+            IMMICH_TELEMETRY_INCLUDE: all
         volumes:
             - $$cap_app_media_root:/data
             - /etc/localtime:/etc/localtime:ro
@@ -52,9 +51,6 @@ services:
         # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
         #   file: hwaccel.ml.yml
         #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
-        ports:
-            # Uncomment for Prometheus metrics endpoint:
-            - 8082:8082
         environment:
             DB_PASSWORD: $$cap_app_db_pass
             DB_USERNAME: $$cap_app_db_user
@@ -62,9 +58,6 @@ services:
             DB_HOSTNAME: srv-captain--$$cap_appname-db
             REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
             UPLOAD_LOCATION: $$cap_app_media_root
-            # For Prometheus metrics support:
-            IMMICH_MICROSERVICES_METRICS_PORT: 8082
-            IMMICH_TELEMETRY_INCLUDE: all
         volumes:
             - $$cap_appname-model-cache:/cache
 
@@ -88,19 +81,40 @@ services:
             - $$cap_appname-db-data:/var/lib/postgresql/data
         # shm_size: 128mb # CapRover does not support shm_size directly
 
+    $$cap_appname-prometheus-init:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: alpine:3
+        environment:
+            PROM_CONTENT: |-
+                $$cap_prometheus_yaml
+        command:
+            - /bin/sh
+            - -c
+            - |
+                mkdir -p /mnt/prometheus
+                echo "$PROM_CONTENT" > /mnt/prometheus/prometheus.yml
+                sleep 10
+        volumes:
+            - $$cap_appname-prometheus-config:/mnt/prometheus
+
     $$cap_appname-prometheus:
         caproverExtra:
             notExposeAsWebApp: "true"
+            containerHttpPort: 9090
         image: prom/prometheus
         ports:
             - 9090:9090
         volumes:
             - $$cap_appname-prometheus-config:/etc/prometheus
             - $$cap_appname-prometheus-data:/prometheus
+        depends_on:
+            - $$cap_appname-prometheus-init
 
     $$cap_appname-grafana:
         caproverExtra:
             notExposeAsWebApp: "true"
+            containerHttpPort: 3000
         image: grafana/grafana
         command: ["./run.sh", "-disable-reporting"]
         ports:
@@ -134,10 +148,11 @@ caproverOneClickApp:
             - To see raw service metrics, you can expose metrics ports by uncommenting the relevant `ports:` and environment variables for Immich services:
             - For server: add `8081:8081` and set `IMMICH_API_METRICS_PORT=8081`
             - For machine learning: add `8082:8082` and set `IMMICH_MICROSERVICES_METRICS_PORT=8082`
+            - More about env variables at https://immich.app/docs/install/environment-variables/#general
             - Then visit `/metrics` on those ports.
 
             Prometheus configuration:
-            - You must provide a valid `prometheus.yml` in the Prometheus config volume (`prometheus-config`). See https://prometheus.io/docs/prometheus/latest/configuration/configuration/ for examples.
+            - Prometheus config file (`prometheus.yml`) is injected on first deploy and persisted. To update it, edit the Prometheus config variable and redeploy. After the first deploy, you can safely remove the `prometheus-init` service.
 
             GPU Support:
             - If your server has a compatible Nvidia GPU, enable machine learning acceleration by using the `-cuda` image tag and uncommenting the relevant deploy block.
@@ -185,3 +200,19 @@ caproverOneClickApp:
           id: $$cap_app_media_root
           description: Absolute host path where all Immich media will be stored (photos, videos, thumbnails, etc). Create this directory beforehand, or leave as default for a Docker-managed volume. If value is absolute (starts with /), it's a host directory; if relative, it's a persistent Docker volume managed by CapRover/Swarm.
           defaultValue: "immich-data"
+        - label: Prometheus config (prometheus.yml)
+          id: $$cap_prometheus_yaml
+          description: Inline YAML for Prometheus configuration (edit to change scrape targets).
+          defaultValue: |
+            global:
+              scrape_interval:     15s
+              evaluation_interval: 15s
+
+            scrape_configs:
+              - job_name: immich_api
+                static_configs:
+                  - targets: ['immich-server:8081']
+
+              - job_name: immich_microservices
+                static_configs:
+                  - targets: ['immich-server:8082']
