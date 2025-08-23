@@ -1,0 +1,185 @@
+captainVersion: 4
+
+services:
+    $$cap_appname:
+        caproverExtra:
+            containerHttpPort: 2283
+        image: ghcr.io/immich-app/immich-server:$$cap_version
+        ports:
+            - 2283:2283
+            # Uncomment for Prometheus metrics endpoint:
+            - 8081:8081
+        # extends:
+        #   file: hwaccel.transcoding.yml
+        #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+        environment:
+            DB_PASSWORD: $$cap_app_db_pass
+            DB_USERNAME: $$cap_app_db_user
+            DB_DATABASE_NAME: $$cap_app_db_name
+            DB_HOSTNAME: srv-captain--$$cap_appname-db
+            REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
+            UPLOAD_LOCATION: /usr/src/app/upload
+            IMMICH_MACHINE_LEARNING_URL: http://srv-captain--$$cap_appname-machine-learning:3003
+            # For Prometheus metrics support:
+            IMMICH_API_METRICS_PORT: 8081
+            IMMICH_LOG_LEVEL: info
+            DB_SKIP_MIGRATIONS: false
+        volumes:
+            - $$cap_app_upload_location:/usr/src/app/upload
+            - /etc/localtime:/etc/localtime:ro
+        depends_on:
+            - $$cap_appname-redis
+            - $$cap_appname-db
+            - $$cap_appname-machine-learning
+
+    $$cap_appname-machine-learning:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
+        # Example tag: ${IMMICH_VERSION:-release}-cuda
+        image: ghcr.io/immich-app/immich-machine-learning:$$cap_version-cuda # or just $$cap_version if not using CUDA
+        # For GPU/CUDA support (uncomment if you need CUDA/gpu):
+        # deploy:
+        #   resources:
+        #     reservations:
+        #       devices:
+        #         - driver: nvidia
+        #           count: 1
+        #           capabilities: [gpu]
+        # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
+        #   file: hwaccel.ml.yml
+        #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+        ports:
+            # Uncomment for Prometheus metrics endpoint:
+            - 8082:8082
+        environment:
+            DB_PASSWORD: $$cap_app_db_pass
+            DB_USERNAME: $$cap_app_db_user
+            DB_DATABASE_NAME: $$cap_app_db_name
+            DB_HOSTNAME: srv-captain--$$cap_appname-db
+            REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
+            UPLOAD_LOCATION: $$cap_app_upload_location
+            # For Prometheus metrics support:
+            IMMICH_MICROSERVICES_METRICS_PORT: 8082
+        volumes:
+            - $$cap_appname-model-cache:/cache
+
+    $$cap_appname-redis:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: $$cap_redis_image
+
+    $$cap_appname-db:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: $$cap_postgres_image
+        environment:
+            POSTGRES_PASSWORD: $$cap_app_db_pass
+            POSTGRES_USER: $$cap_app_db_user
+            POSTGRES_DB: $$cap_app_db_name
+            POSTGRES_INITDB_ARGS: "--data-checksums"
+            # DB_STORAGE_TYPE: 'HDD' # Uncomment if not on SSD
+            PG_DATA: /var/lib/postgresql/data
+        volumes:
+            - $$cap_appname-db-data:/var/lib/postgresql/data
+        # shm_size: 128mb # CapRover does not support shm_size directly
+
+    $$cap_appname-prometheus:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: prom/prometheus
+        ports:
+            - 9090:9090
+        volumes:
+            - $$cap_appname-prometheus-config:/etc/prometheus
+            - $$cap_appname-prometheus-data:/prometheus
+
+    $$cap_appname-grafana:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: grafana/grafana
+        command: ["./run.sh", "-disable-reporting"]
+        ports:
+            - 3000:3000
+        volumes:
+            - $$cap_appname-grafana-data:/var/lib/grafana
+
+volumes:
+    $$cap_app_upload_location:
+    $$cap_appname-model-cache:
+    $$cap_appname-db-data:
+    $$cap_appname-prometheus-config:
+    $$cap_appname-prometheus-data:
+    $$cap_appname-grafana-data:
+
+caproverOneClickApp:
+    displayName: Immich
+    description: Open source (AGPLv3) Google Photos alternative with Prometheus and Grafana. Backup your photos and videos to your own server.
+    isOfficial: false
+    documentation: https://immich.app
+    instructions:
+        start: |-
+            Leave every default value as is for a working and simple installation.
+            You can specify the (full) path to the directory you want to save your media at. The directory must exist beforehand. Immich can be used from a browser but typically requires you to install the Immich app on your phone.
+            If you have big media files (bigger than 500MB) that you want to backup, update your Nginx configuration file in CapRover to increase your `client_max_body_size` value, otherwise uploads will fail.
+
+            Prometheus & Grafana:
+            - Prometheus and Grafana are included for observability and metrics.
+            - Visit Prometheus (port 9090) or Grafana (port 3000) from your CapRover dashboard.
+            - Grafana connects to Prometheus at: `http://srv-captain--$$cap_appname-prometheus:9090`.
+            - To see raw service metrics, you can expose metrics ports by uncommenting the relevant `ports:` and environment variables for Immich services:
+            - For server: add `8081:8081` and set `IMMICH_API_METRICS_PORT=8081`
+            - For machine learning: add `8082:8082` and set `IMMICH_MICROSERVICES_METRICS_PORT=8082`
+            - Then visit `/metrics` on those ports.
+
+            Prometheus configuration:
+            - You must provide a valid `prometheus.yml` in the Prometheus config volume (`prometheus-config`). See https://prometheus.io/docs/prometheus/latest/configuration/configuration/ for examples.
+
+            GPU Support:
+            - If your server has a compatible Nvidia GPU, enable machine learning acceleration by using the `-cuda` image tag and uncommenting the relevant deploy block.
+            - Your host must have Nvidia drivers and the Docker GPU runtime enabled.
+
+            Volumes & Data:
+            - Upload directory, database, Prometheus, and Grafana all use named volumes.
+            - If you change a volume path or a related environment variable (like `PG_DATA`), make sure they match exactly. Changing one without the other may cause data loss or misconfiguration.
+
+        end: |-
+            On your first visit it will ask for email and password to set up the admin user.
+            Remember to change the default Nginx configuration and increase the `client_max_body_size` value if you expect to backup files bigger than 500MB, otherwise uploads will fail.
+
+            Some upgrades take more and to preempt a restart go to **App Configs** and paste the following snippet into **Service Update Override**: `{ "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": "0" } } }`
+
+            Prometheus and Grafana dashboards are available after deploy (ports 9090 and 3000).
+            Grafana persists dashboards and Prometheus collects metrics from Immich and related services as configured.
+
+            If you modify volume mounts or database paths, always ensure the related environment variable (e.g. `PG_DATA`) matches the mount path. Never change just one�always update both.
+
+    variables:
+        - label: Immich version
+          id: $$cap_version
+          description: Check out their valid tags at https://github.com/immich-app/immich/releases
+          defaultValue: v1.139.2
+        - label: Immich Redis (Valkey) image
+          id: $$cap_redis_image
+          description: Full image ref (with tag or digest) for Redis/Valkey. Default matches latest compose.
+          defaultValue: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
+        - label: Immich Postgres image
+          id: $$cap_postgres_image
+          description: Full image ref (with tag or digest) for the Immich-optimized Postgres. See https://github.com/immich-app/immich/releases for valid versions.
+          defaultValue: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:32324a2f41df5de9efe1af166b7008c3f55646f8d0e00d9550c16c9822366b4a
+        - label: Database password
+          id: $$cap_app_db_pass
+          description: Password for accessing the database. A random one has been generated for you.
+          defaultValue: $$cap_gen_random_hex(32)
+        - label: Database username
+          id: $$cap_app_db_user
+          description: Username to access the database
+          defaultValue: "immich"
+        - label: Database name
+          id: $$cap_app_db_name
+          description: A name for the database used by Immich
+          defaultValue: "immich"
+        - label: Upload directory
+          id: $$cap_app_upload_location
+          description: Host path to the directory where you plan to store all your files. It should be created beforehand. If you want caprover to create it for you just leave the default 'immich-data'
+          defaultValue: "immich-data"
