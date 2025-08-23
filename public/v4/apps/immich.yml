@@ -113,7 +113,7 @@ volumes:
     $$cap_appname-grafana-data:
 
 caproverOneClickApp:
-    displayName: Immich
+    displayName: Immich 1.39.2+
     description: Open source (AGPLv3) Google Photos alternative with Prometheus and Grafana. Backup your photos and videos to your own server.
     isOfficial: false
     documentation: https://immich.app
