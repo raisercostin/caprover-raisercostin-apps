@@ -85,15 +85,25 @@ services:
         caproverExtra:
             notExposeAsWebApp: "true"
         image: alpine:3
-        environment:
-            PROM_CONTENT: |-
-                $$cap_prometheus_yaml
         command:
             - /bin/sh
             - -c
             - |
                 mkdir -p /mnt/prometheus
-                echo "$PROM_CONTENT" > /mnt/prometheus/prometheus.yml
+                cat > /mnt/prometheus/prometheus.yml <<'EOF'
+                global:
+                scrape_interval:     15s
+                evaluation_interval: 15s
+
+                scrape_configs:
+                - job_name: immich_api
+                    static_configs:
+                    - targets: ['srv-captain--$$cap_appname:8081']
+
+                - job_name: immich_microservices
+                    static_configs:
+                    - targets: ['srv-captain--$$cap_appname-machine-learning:8082']
+                EOF
                 sleep 10
         volumes:
             - $$cap_appname-prometheus-config:/mnt/prometheus
@@ -206,19 +216,3 @@ caproverOneClickApp:
           id: $$cap_app_media_root
           description: Absolute host path where all Immich media will be stored (photos, videos, thumbnails, etc). Create this directory beforehand, or leave as default for a Docker-managed volume. If value is absolute (starts with /), it's a host directory; if relative, it's a persistent Docker volume managed by CapRover/Swarm.
           defaultValue: "immich-data"
-        - label: Prometheus config (prometheus.yml)
-          id: $$cap_prometheus_yaml
-          description: Inline YAML for Prometheus configuration (edit to change scrape targets).
-          defaultValue: |
-            global:
-              scrape_interval:     15s
-              evaluation_interval: 15s
-
-            scrape_configs:
-              - job_name: immich_api
-                static_configs:
-                  - targets: ['immich-server:8081']
-
-              - job_name: immich_microservices
-                static_configs:
-                  - targets: ['immich-server:8082']
