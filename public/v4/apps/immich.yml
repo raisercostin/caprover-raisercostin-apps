@@ -22,8 +22,8 @@ services:
             IMMICH_MACHINE_LEARNING_URL: http://srv-captain--$$cap_appname-machine-learning:3003
             # For Prometheus metrics support:
             IMMICH_API_METRICS_PORT: 8081
-            IMMICH_LOG_LEVEL: info
-            DB_SKIP_MIGRATIONS: false
+            IMMICH_LOG_LEVEL: log
+            DB_SKIP_MIGRATIONS: 'false'
         volumes:
             - $$cap_app_media_root:/data
             - /etc/localtime:/etc/localtime:ro
@@ -31,6 +31,8 @@ services:
             - $$cap_appname-redis
             - $$cap_appname-db
             - $$cap_appname-machine-learning
+        serviceUpdateOverride: >
+            { "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": 0 } } }
 
     $$cap_appname-machine-learning:
         caproverExtra:
@@ -62,6 +64,7 @@ services:
             UPLOAD_LOCATION: $$cap_app_media_root
             # For Prometheus metrics support:
             IMMICH_MICROSERVICES_METRICS_PORT: 8082
+            IMMICH_TELEMETRY_INCLUDE: all
         volumes:
             - $$cap_appname-model-cache:/cache
 
@@ -148,12 +151,10 @@ caproverOneClickApp:
             On your first visit it will ask for email and password to set up the admin user.
             Remember to change the default Nginx configuration and increase the `client_max_body_size` value if you expect to backup files bigger than 500MB, otherwise uploads will fail.
 
-            Some upgrades take more and to preempt a restart go to **App Configs** and paste the following snippet into **Service Update Override**: `{ "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": "0" } } }`
+            Some upgrades take more and to preempt a restart go to **App Configs** and for now **Service Update Override** was preconfigured: `{ "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": "0" } } }`
 
-            Prometheus and Grafana dashboards are available after deploy (ports 9090 and 3000).
+            Prometheus and Grafana dashboards are available after deploy (ports 9090 and 3001).
             Grafana persists dashboards and Prometheus collects metrics from Immich and related services as configured.
-
-            If you modify volume mounts or database paths, always ensure the related environment variable (e.g. `PG_DATA`) matches the mount path. Never change just one�always update both.
 
     variables:
         - label: Immich version
