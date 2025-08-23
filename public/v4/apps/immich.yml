@@ -18,14 +18,14 @@ services:
             DB_DATABASE_NAME: $$cap_app_db_name
             DB_HOSTNAME: srv-captain--$$cap_appname-db
             REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
-            UPLOAD_LOCATION: /usr/src/app/upload
+            UPLOAD_LOCATION: /data
             IMMICH_MACHINE_LEARNING_URL: http://srv-captain--$$cap_appname-machine-learning:3003
             # For Prometheus metrics support:
             IMMICH_API_METRICS_PORT: 8081
             IMMICH_LOG_LEVEL: info
             DB_SKIP_MIGRATIONS: false
         volumes:
-            - $$cap_app_upload_location:/usr/src/app/upload
+            - $$cap_app_media_root:/data
             - /etc/localtime:/etc/localtime:ro
         depends_on:
             - $$cap_appname-redis
@@ -37,7 +37,8 @@ services:
             notExposeAsWebApp: "true"
         # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
         # Example tag: ${IMMICH_VERSION:-release}-cuda
-        image: ghcr.io/immich-app/immich-machine-learning:$$cap_version-cuda # or just $$cap_version if not using CUDA
+        # or just $$cap_version if not using CUDA
+        image: ghcr.io/immich-app/immich-machine-learning:$$cap_version
         # For GPU/CUDA support (uncomment if you need CUDA/gpu):
         # deploy:
         #   resources:
@@ -58,7 +59,7 @@ services:
             DB_DATABASE_NAME: $$cap_app_db_name
             DB_HOSTNAME: srv-captain--$$cap_appname-db
             REDIS_HOSTNAME: srv-captain--$$cap_appname-redis
-            UPLOAD_LOCATION: $$cap_app_upload_location
+            UPLOAD_LOCATION: $$cap_app_media_root
             # For Prometheus metrics support:
             IMMICH_MICROSERVICES_METRICS_PORT: 8082
         volumes:
@@ -100,12 +101,12 @@ services:
         image: grafana/grafana
         command: ["./run.sh", "-disable-reporting"]
         ports:
-            - 3000:3000
+            - 3001:3000
         volumes:
             - $$cap_appname-grafana-data:/var/lib/grafana
 
 volumes:
-    $$cap_app_upload_location:
+    $$cap_app_media_root:
     $$cap_appname-model-cache:
     $$cap_appname-db-data:
     $$cap_appname-prometheus-config:
@@ -125,7 +126,7 @@ caproverOneClickApp:
 
             Prometheus & Grafana:
             - Prometheus and Grafana are included for observability and metrics.
-            - Visit Prometheus (port 9090) or Grafana (port 3000) from your CapRover dashboard.
+            - Visit Prometheus (port 9090) or Grafana (port 3001) from your CapRover dashboard.
             - Grafana connects to Prometheus at: `http://srv-captain--$$cap_appname-prometheus:9090`.
             - To see raw service metrics, you can expose metrics ports by uncommenting the relevant `ports:` and environment variables for Immich services:
             - For server: add `8081:8081` and set `IMMICH_API_METRICS_PORT=8081`
@@ -179,7 +180,7 @@ caproverOneClickApp:
           id: $$cap_app_db_name
           description: A name for the database used by Immich
           defaultValue: "immich"
-        - label: Upload directory
-          id: $$cap_app_upload_location
-          description: Host path to the directory where you plan to store all your files. It should be created beforehand. If you want caprover to create it for you just leave the default 'immich-data'
+        - label: Media root (legacy "upload" directory)
+          id: $$cap_app_media_root
+          description: Absolute host path where all Immich media will be stored (photos, videos, thumbnails, etc). Create this directory beforehand, or leave as default for a Docker-managed volume. If value is absolute (starts with /), it's a host directory; if relative, it's a persistent Docker volume managed by CapRover/Swarm.
           defaultValue: "immich-data"
