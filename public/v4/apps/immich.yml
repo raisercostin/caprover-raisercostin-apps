@@ -4,7 +4,9 @@ services:
     $$cap_appname:
         caproverExtra:
             containerHttpPort: 2283
+            websocketSupport: 'true'
         image: ghcr.io/immich-app/immich-server:$$cap_version
+        restart: unless-stopped
         ports:
             - 2283:2283
         # extends:
@@ -172,6 +174,9 @@ services:
         caproverExtra:
             notExposeAsWebApp: "true"
             containerHttpPort: 3000
+            httpAuth:
+                user: 'grafanaadmin'
+                password: 'grafanapass'
         depends_on:
             - $$cap_appname-grafana-init
         ports:
@@ -266,4 +271,4 @@ caproverOneClickApp:
         - label: Media root (legacy "upload" directory)
           id: $$cap_app_media_root
           description: Absolute host path where all Immich media will be stored (photos, videos, thumbnails, etc). Create this directory beforehand, or leave as default for a Docker-managed volume. If value is absolute (starts with /), it's a host directory; if relative, it's a persistent Docker volume managed by CapRover/Swarm.
-          defaultValue: "immich-data"
+          defaultValue: "$$cap_appname-data"
