@@ -2,6 +2,7 @@ const path = require('path');
 const yaml = require('yaml');
 const fs = require('fs-extra');
 const { execSync } = require('child_process');
+const { log } = require('console');
 
 // Define folder paths.
 const PUBLIC_FOLDER = path.join(__dirname, '..', 'public');
@@ -32,48 +33,11 @@ function capitalizeFirstLetter(string) {
 }
 
 /**
- * Returns a Map of {relativePath: lastCommitIsoDate}
- * @param {string} baseDir - Directory relative to git root for filtering files (e.g., your APPS_FOLDER)
- * @returns {Map<string, string>}  // e.g. { 'public/v4/apps/foo.yml' => '2023-06-11T19:12:44+00:00' }
- */
-/**
- * Returns a Map of {filename: lastCommitIsoDate}
- * Only includes files in baseDir (absolute or relative to repo root)
- */
-function computeGitLastChangeMap(baseDir) {
-  const path = require('path');
-  const gitLog = execSync('git log --pretty=format:"%cI" --name-only', { encoding: 'utf8' });
-  const lines = gitLog.split('\n');
-  const fileMap = new Map();
-  let date = null;
-  for (const line of lines) {
-    if (/^\d{4}-\d{2}-\d{2}T/.test(line)) {
-      date = line.trim();
-    } else if (line.trim() && date) {
-      const relPath = line.trim().replace(/\\/g, '/');
-      if (!fileMap.has(relPath)) {
-        fileMap.set(relPath, date);
-      }
-    }
-  }
-  // Filter: only files inside baseDir, return filename as key
-  const result = new Map();
-  const base = baseDir.replace(/\\/g, '/').replace(/\/$/, '');
-  for (const [file, ts] of fileMap.entries()) {
-    if (file.startsWith(base + '/')) {
-      result.set(require('path').basename(file), ts);
-    }
-  }
-  return result;
-}
-/**
  * Create an app list from the filenames of apps.
  * @param {Array<string>} appFilenames - An array of application filenames.
  * @returns {Promise<Object>} Object containing the proper app files list and details.
  */
 async function makeAppList(appFilenames, lastChangeMap) {
-  console.log(Array.from(lastChangeMap.keys()).slice(0, 10));
-
   const properAppFiles = appFilenames.filter((file) => file.endsWith('.yml'));
 
   if (properAppFiles.length !== appFilenames.length) {
@@ -96,8 +60,7 @@ async function makeAppList(appFilenames, lastChangeMap) {
       const displayName = appData.displayName || capitalizeFirstLetter(appName);
       const description = appData.description || '';
       const relPath = path.relative(process.cwd(), path.join(APPS_FOLDER, filename)).replace(/\\/g, '/');
-      const lastModified = lastChangeMap.get(relPath) || null;
-      console.log('Trying', relPath, '=>', lastChangeMap.get(relPath));
+      const lastCommit = lastChangeMap.get(relPath) || null;
 
       appDetails.push({
         name: appName,
@@ -105,11 +68,25 @@ async function makeAppList(appFilenames, lastChangeMap) {
         description: description,
         isOfficial: appData.isOfficial === 'true',
         logoUrl: `${appName}.png`,
-        lastModified: lastModified
+        lastModified: lastCommit?.date || null,
+        lastCommitHash: lastCommit?.hash || null,
+        lastCommitAuthor: htmlAttrEscape(lastCommit?.author) || null,
+        lastCommitSubject: htmlAttrEscape(lastCommit?.subject) || null,
       });
     } else {
       throw new Error(`Whoa, an unknown captain version: ${captainVersion}`);
     }
+  }
+
+  function htmlAttrEscape(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r?\n/g, '&#10;');
   }
 
   return {
@@ -155,6 +132,32 @@ async function buildDist() {
     process.exit(127);
   }
 }
+/**
+ * Returns a Map of {relativePath: lastCommitIsoDate}
+ * @param {string} baseDir - Directory relative to git root for filtering files (e.g., your APPS_FOLDER)
+ * @returns {Map<string, string>}  // e.g. { 'public/v4/apps/foo.yml' => '2023-06-11T19:12:44+00:00' }
+ */
+function computeGitLastChangeMap(baseDir) {
+  const log = execSync('git log --pretty=format:"%H|%cI|%an|%s" --name-only', { encoding: 'utf8' });
+  const lines = log.split('\n');
+  const fileMap = new Map();
+  let commit = null;
+  for (const line of lines) {
+    if (/^[0-9a-f]{40}\|/.test(line)) {
+      // commit line
+      const [hash, date, author, subject] = line.split('|');
+      commit = { hash, date, author, subject };
+    } else if (line.trim() === '') {
+      continue;
+    } else if (line.trim() && commit) {
+      const relPath = line.trim().replace(/\\/g, '/');
+      if (!fileMap.has(relPath)) {
+        fileMap.set(relPath, { ...commit });
+      }
+    }
+  }
+  return fileMap;
+}
 
 async function createIndexHtml(appList, buildTimestamp) {
   const htmlContent = `
@@ -176,7 +179,11 @@ async function createIndexHtml(appList, buildTimestamp) {
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             ${appList.map(app => `
-              <div class="bg-gray-200 rounded-md overflow-hidden shadow transform transition duration-300 hover:scale-105" title="Last modified: ${app.lastModified}">
+              <div class="bg-gray-200 rounded-md overflow-hidden shadow transform transition duration-300 hover:scale-105"
+              title="Last commit: ${app.lastCommitSubject}&#10;
+              Date: ${app.lastModified}&#10;
+              Author: ${app.lastCommitAuthor}&#10;
+              Hash: ${app.lastCommitHash ? app.lastCommitHash.substr(0, 7) : '-'}">
                 <div class="p-4">
                   <img class="w-16 h-16 mx-auto" src="v4/logos/${app.logoUrl}" alt="${app.displayName} logo">
                   <div class="py-4">
