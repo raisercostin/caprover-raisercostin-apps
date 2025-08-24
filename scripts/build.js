@@ -48,7 +48,8 @@ async function makeAppList(appFilenames) {
   const appDetails = [];
 
   for (const filename of properAppFiles) {
-    const content = await readYamlFile(path.join(APPS_FOLDER, filename));
+    const filePath = path.join(APPS_FOLDER, filename);
+    const content = await readYamlFile(filePath);
     const captainVersion = `${content.captainVersion}`;
 
     const appName = filename.replace('.yml', '');
@@ -57,6 +58,7 @@ async function makeAppList(appFilenames) {
     if (captainVersion === '4') {
       const displayName = appData.displayName || capitalizeFirstLetter(appName);
       const description = appData.description || '';
+      const { mtime } = await fs.stat(filePath);
 
       appDetails.push({
         name: appName,
@@ -64,6 +66,7 @@ async function makeAppList(appFilenames) {
         description: description,
         isOfficial: appData.isOfficial === 'true',
         logoUrl: `${appName}.png`,
+        lastModified: mtime.toISOString()
       });
     } else {
       throw new Error(`Whoa, an unknown captain version: ${captainVersion}`);
@@ -105,14 +108,15 @@ async function buildDist() {
       await fs.copy(path.join(PUBLIC_FOLDER, 'CNAME'), path.join(DIST_FOLDER, 'CNAME'));
     if (await fs.pathExists(path.join(PUBLIC_FOLDER, 'logo-transparent.png')))
       await fs.copy(path.join(PUBLIC_FOLDER, 'logo-transparent.png'), path.join(DIST_FOLDER, 'logo-transparent.png'));
-    await createIndexHtml(allAppsList.appDetails);
+    const buildTimestamp = new Date().toISOString();
+    await createIndexHtml(allAppsList.appDetails, buildTimestamp);
   } catch (err) {
     console.error(err);
     process.exit(127);
   }
 }
 
-async function createIndexHtml(appList) {
+async function createIndexHtml(appList, buildTimestamp) {
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
@@ -124,15 +128,15 @@ async function createIndexHtml(appList) {
       </head>
       <body class="bg-gradient-to-r from-indigo-950 via-purple-950 to-indigo-950 min-h-screen flex items-center justify-center">
         <div class="container mx-auto px-4 py-8">
-        <div class="text-center mb-12">
-          <h1 class="text-4xl font-bold text-white">Available Apps</h1>
-          <img src="logo-transparent.png" alt=""
-            class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12 text-white">
-          <img src="logo-transparent.png" alt="Logo" class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12">
-        </div>
+          <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-white">Available Apps</h1>
+            <img src="logo-transparent.png" alt="" class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12 text-white">
+            <img src="logo-transparent.png" alt="Logo" class="mx-auto hover:scale-110 transform transition duration-500 w-auto h-12">
+            <p class="mt-2 text-xs text-gray-300">Build time: ${buildTimestamp}</p>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             ${appList.map(app => `
-              <div class="bg-gray-200 rounded-md overflow-hidden shadow transform transition duration-300 hover:scale-105">
+              <div class="bg-gray-200 rounded-md overflow-hidden shadow transform transition duration-300 hover:scale-105" title="Last modified: ${app.lastModified}">
                 <div class="p-4">
                   <img class="w-16 h-16 mx-auto" src="v4/logos/${app.logoUrl}" alt="${app.displayName} logo">
                   <div class="py-4">
