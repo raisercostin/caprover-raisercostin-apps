@@ -110,6 +110,9 @@ caproverOneClickApp:
 
             Some upgrades take more and to preempt a restart go to **App Configs** and for now **Service Update Override** was preconfigured: `{ "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": "0" } } }`
 
+            Run also `docker service update --mount-add type=tmpfs,target=/dev/shm,tmpfs-size=128m srv-captain--$$cap_appname-db` to configure shm size for Postgres, otherwise you may get errors when the database tries to use shared memory.
+            See https://immich.app/docs/install/upgrading#migrating-to-vectorchord
+
     variables:
         - label: Immich version
           id: $$cap_version

@@ -241,6 +241,9 @@ caproverOneClickApp:
             Prometheus and Grafana dashboards are available after deploy (ports 9090 and 3001).
             Grafana persists dashboards and Prometheus collects metrics from Immich and related services as configured.
 
+            Run also `docker service update --mount-add type=tmpfs,target=/dev/shm,tmpfs-size=128m srv-captain--$$cap_appname-db` to configure shm size for Postgres, otherwise you may get errors when the database tries to use shared memory.
+            See https://immich.app/docs/install/upgrading#migrating-to-vectorchord
+
     variables:
         - label: Immich version
           id: $$cap_version
