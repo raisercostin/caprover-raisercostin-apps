@@ -129,12 +129,12 @@ services:
             - /bin/sh
             - -c
             - |
-                mkdir -p /mnt/grafana/provisioning/datasources
-                mkdir -p /mnt/grafana/provisioning/dashboards
-                mkdir -p /mnt/grafana/dashboards
+                mkdir -p /etc/grafana/provisioning/datasources
+                mkdir -p /etc/grafana/provisioning/dashboards
+                mkdir -p /var/lib/grafana/dashboards
 
-                # Write Prometheus datasource provisioning
-                cat > /mnt/grafana/provisioning/datasources/datasource.yaml <<'EOF'
+                # Write datasource
+                cat > /etc/grafana/provisioning/datasources/datasource.yaml <<'EOF'
                 apiVersion: 1
                 datasources:
                   - name: Prometheus
@@ -145,7 +145,7 @@ services:
                 EOF
 
                 # Write dashboards provisioning config
-                cat > /mnt/grafana/provisioning/dashboards/immich-overview.yaml <<'EOF'
+                cat > /etc/grafana/provisioning/dashboards/immich-overview.yaml <<'EOF'
                 apiVersion: 1
                 providers:
                   - name: 'immich-overview'
@@ -158,12 +158,13 @@ services:
                       path: /var/lib/grafana/dashboards
                 EOF
 
-                # Download Immich Overview dashboard JSON
-                wget -O /mnt/grafana/dashboards/immich-overview.json https://grafana.com/api/dashboards/22555/revisions/1/download
+                # Download dashboard
+                wget -O /var/lib/grafana/dashboards/immich-overview.json https://grafana.com/api/dashboards/22555/revisions/1/download
 
                 sleep 10
         volumes:
-            - $$cap_appname-grafana-config:/mnt/grafana
+            - $$cap_appname-grafana-provisioning:/etc/grafana/provisioning
+            - $$cap_appname-grafana-dashboards:/var/lib/grafana/dashboards
 
     $$cap_appname-grafana:
         image: $$cap_grafana_image
@@ -176,8 +177,8 @@ services:
         ports:
             - 3001:3000
         volumes:
-            - $$cap_appname-grafana-config/provisioning:/etc/grafana/provisioning
-            - $$cap_appname-grafana-config/dashboards:/var/lib/grafana/dashboards
+            - $$cap_appname-grafana-provisioning:/etc/grafana/provisioning
+            - $$cap_appname-grafana-dashboards:/var/lib/grafana/dashboards
             - $$cap_appname-grafana-data:/var/lib/grafana
 
 volumes:
@@ -186,7 +187,8 @@ volumes:
     $$cap_appname-db-data:
     $$cap_appname-prometheus-config:
     $$cap_appname-prometheus-data:
-    $$cap_appname-grafana-config:
+    $$cap_appname-grafana-provisioning:
+    $$cap_appname-grafana-dashboards:
     $$cap_appname-grafana-data:
 
 caproverOneClickApp:
