@@ -93,7 +93,9 @@ async function makeAppList(appFilenames, lastChangeMap) {
     if (captainVersion === '4') {
       const displayName = appData.displayName || capitalizeFirstLetter(appName);
       const description = appData.description || '';
-      const lastModified = lastChangeMap.get(filename) || null;
+      const relPath = path.relative(process.cwd(), path.join(APPS_FOLDER, filename)).replace(/\\/g, '/');
+      const lastModified = lastChangeMap.get(relPath) || null;
+      console.log('Trying', relPath, '=>', lastChangeMap.get(relPath));
 
       appDetails.push({
         name: appName,
