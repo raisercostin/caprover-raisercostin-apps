@@ -277,4 +277,4 @@ caproverOneClickApp:
         - label: Media root (legacy "upload" directory)
           id: $$cap_app_media_root
           description: Absolute host path where all Immich media will be stored (photos, videos, thumbnails, etc). Create this directory beforehand, or leave as default for a Docker-managed volume. If value is absolute (starts with /), it's a host directory; if relative, it's a persistent Docker volume managed by CapRover/Swarm.
-          defaultValue: "$$cap_appname-data"
+          defaultValue: "immich-data"
