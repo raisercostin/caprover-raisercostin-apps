@@ -92,17 +92,17 @@ services:
                 mkdir -p /mnt/prometheus
                 cat > /mnt/prometheus/prometheus.yml <<'EOF'
                 global:
-                scrape_interval:     15s
-                evaluation_interval: 15s
+                  scrape_interval:     15s
+                  evaluation_interval: 15s
 
                 scrape_configs:
-                - job_name: immich_api
+                  - job_name: immich_api
                     static_configs:
-                    - targets: ['srv-captain--$$cap_appname:8081']
+                      - targets: ['srv-captain--$$cap_appname:8081']
 
-                - job_name: immich_microservices
+                  - job_name: immich_microservices
                     static_configs:
-                    - targets: ['srv-captain--$$cap_appname:8082']
+                      - targets: ['srv-captain--$$cap_appname:8082']
                 EOF
                 sleep 10
         volumes:
