@@ -1,7 +1,7 @@
 const path = require('path');
 const yaml = require('yaml');
 const fs = require('fs-extra');
-const { log } = require('console');
+const { execSync } = require('child_process');
 
 // Define folder paths.
 const PUBLIC_FOLDER = path.join(__dirname, '..', 'public');
@@ -30,8 +30,6 @@ async function readYamlFile(filePath) {
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
-const { execSync } = require('child_process');
-const path = require('path');
 
 /**
  * Returns a Map of {relativePath: lastCommitIsoDate}
