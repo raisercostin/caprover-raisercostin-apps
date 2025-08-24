@@ -22,6 +22,9 @@ services:
             IMMICH_MACHINE_LEARNING_URL: http://srv-captain--$$cap_appname-machine-learning:3003
             IMMICH_LOG_LEVEL: log
             DB_SKIP_MIGRATIONS: 'false'
+            IMMICH_API_METRICS_PORT: 8081
+            IMMICH_MICROSERVICES_METRICS_PORT: 8082
+            IMMICH_TELEMETRY_INCLUDE: all
         volumes:
             - $$cap_app_media_root:/data
             - /etc/localtime:/etc/localtime:ro
@@ -80,13 +83,127 @@ services:
             - $$cap_appname-db-data:/var/lib/postgresql/data
         # shm_size: 128mb # CapRover does not support shm_size directly
 
+    $$cap_appname-prometheus-init:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        image: alpine:3
+        command:
+            - /bin/sh
+            - -c
+            - |
+                mkdir -p /mnt/prometheus
+                cat > /mnt/prometheus/prometheus.yml <<'EOF'
+                global:
+                  scrape_interval:     15s
+                  evaluation_interval: 15s
+
+                scrape_configs:
+                  - job_name: $$cap_appname-immich_api
+                    static_configs:
+                      - targets: ['srv-captain--$$cap_appname:8081']
+                    relabel_configs:
+                      - target_label: namespace
+                        replacement: $$cap_appname
+
+                  - job_name: $$cap_appname-immich_microservices
+                    static_configs:
+                      - targets: ['srv-captain--$$cap_appname:8082']
+                    relabel_configs:
+                      - target_label: namespace
+                        replacement: $$cap_appname
+                EOF
+                sleep 10
+        volumes:
+            - $$cap_appname-prometheus-config:/mnt/prometheus
+
+    $$cap_appname-prometheus:
+        caproverExtra:
+            notExposeAsWebApp: "true"
+            containerHttpPort: 9090
+        image: $$cap_prometheus_image
+        ports:
+            - 9090:9090
+        volumes:
+            - $$cap_appname-prometheus-config:/etc/prometheus
+            - $$cap_appname-prometheus-data:/prometheus
+        depends_on:
+            - $$cap_appname-prometheus-init
+
+    $$cap_appname-grafana-init:
+        image: alpine:3
+        caproverExtra:
+            notExposeAsWebApp: "true"
+        command:
+            - /bin/sh
+            - -c
+            - |
+                mkdir -p /etc/grafana/provisioning/datasources
+                mkdir -p /etc/grafana/provisioning/dashboards
+                mkdir -p /var/lib/grafana/dashboards
+
+                # Write datasource
+                cat > /etc/grafana/provisioning/datasources/datasource.yaml <<'EOF'
+                apiVersion: 1
+                datasources:
+                  - name: Prometheus
+                    type: prometheus
+                    access: proxy
+                    url: http://srv-captain--$$cap_appname-prometheus:9090
+                    isDefault: true
+                EOF
+
+                # Write dashboards provisioning config
+                cat > /etc/grafana/provisioning/dashboards/immich-overview.yaml <<'EOF'
+                apiVersion: 1
+                providers:
+                  - name: 'immich-overview'
+                    orgId: 1
+                    folder: ''
+                    type: file
+                    disableDeletion: false
+                    updateIntervalSeconds: 10
+                    options:
+                      path: /var/lib/grafana/dashboards
+                EOF
+
+                # Download dashboard
+                wget -O /var/lib/grafana/dashboards/immich-overview.json https://grafana.com/api/dashboards/22555/revisions/1/download
+
+                sleep 10
+        volumes:
+            - $$cap_appname-grafana-provisioning:/etc/grafana/provisioning
+            - $$cap_appname-grafana-dashboards:/var/lib/grafana/dashboards
+
+    $$cap_appname-grafana:
+        image: $$cap_grafana_image
+        restart: always
+        caproverExtra:
+            notExposeAsWebApp: "true"
+            containerHttpPort: 3000
+            httpAuth:
+                user: 'grafanaadmin'
+                password: 'grafanapass'
+        depends_on:
+            - $$cap_appname-grafana-init
+        ports:
+            - 3001:3000
+        volumes:
+            - $$cap_appname-grafana-provisioning:/etc/grafana/provisioning
+            - $$cap_appname-grafana-dashboards:/var/lib/grafana/dashboards
+            - $$cap_appname-grafana-data:/var/lib/grafana
+
 volumes:
     $$cap_app_media_root:
     $$cap_appname-model-cache:
     $$cap_appname-db-data:
+    $$cap_appname-prometheus-config:
+    $$cap_appname-prometheus-data:
+    $$cap_appname-grafana-provisioning:
+    $$cap_appname-grafana-dashboards:
+    $$cap_appname-grafana-data:
 
 caproverOneClickApp:
-    displayName: Immich 1.39.2+
+    displayName: Immich 1.39.2+ with Prometheus & Grafana (Monitoring)
     description: Open source (AGPLv3) Google Photos alternative with Prometheus and Grafana. Backup your photos and videos to your own server.
     isOfficial: false
     documentation: https://immich.app
@@ -96,12 +213,23 @@ caproverOneClickApp:
             You can specify the (full) path to the directory you want to save your media at. The directory must exist beforehand. Immich can be used from a browser but typically requires you to install the Immich app on your phone.
             If you have big media files (bigger than 500MB) that you want to backup, update your Nginx configuration file in CapRover to increase your `client_max_body_size` value, otherwise uploads will fail.
 
+            Prometheus & Grafana:
+            - Prometheus and Grafana are included for observability and metrics.
+            - Visit Prometheus (port 9090) or Grafana (port 3001) from your CapRover dashboard.
+            - Grafana connects to Prometheus at: `http://srv-captain--$$cap_appname-prometheus:9090`.
+            - To see raw service metrics, you can expose metrics ports by uncommenting the relevant `ports:` and environment variables for Immich services:
+            - More about env variables at https://immich.app/docs/install/environment-variables/#general
+            - Then visit `/metrics` on those ports.
+
+            Prometheus configuration:
+            - Prometheus config file (`prometheus.yml`) is injected on first deploy and persisted. To update it, edit the Prometheus config variable and redeploy. After the first deploy, you can safely remove the `prometheus-init` service.
+
             GPU Support:
             - If your server has a compatible Nvidia GPU, enable machine learning acceleration by using the `-cuda` image tag and uncommenting the relevant deploy block.
             - Your host must have Nvidia drivers and the Docker GPU runtime enabled.
 
             Volumes & Data:
-            - Upload directory, database use named volumes.
+            - Upload directory, database, Prometheus, and Grafana all use named volumes.
             - If you change a volume path or a related environment variable (like `PG_DATA`), make sure they match exactly. Changing one without the other may cause data loss or misconfiguration.
 
         end: |-
@@ -109,6 +237,9 @@ caproverOneClickApp:
             Remember to change the default Nginx configuration and increase the `client_max_body_size` value if you expect to backup files bigger than 500MB, otherwise uploads will fail.
 
             Some upgrades take more and to preempt a restart go to **App Configs** and for now **Service Update Override** was preconfigured: `{ "TaskTemplate": { "RestartPolicy": { "Condition": "none", "MaxAttempts": "0" } } }`
+
+            Prometheus and Grafana dashboards are available after deploy (ports 9090 and 3001).
+            Grafana persists dashboards and Prometheus collects metrics from Immich and related services as configured.
 
     variables:
         - label: Immich version
@@ -123,6 +254,14 @@ caproverOneClickApp:
           id: $$cap_postgres_image
           description: Full image ref (with tag or digest) for the Immich-optimized Postgres. See https://github.com/immich-app/immich/releases for valid versions.
           defaultValue: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:32324a2f41df5de9efe1af166b7008c3f55646f8d0e00d9550c16c9822366b4a
+        - label: Grafana image
+          id: $$cap_grafana_image
+          description: Find versions on DockerHub https://hub.docker.com/r/grafana/grafana/tags
+          defaultValue: grafana/grafana:12.1
+        - label: Prometheus image
+          id: $$cap_prometheus_image
+          description: Find versions on DockerHub https://hub.docker.com/r/prom/prometheus/tags
+          defaultValue: prom/prometheus:v3.5.0
         - label: Database password
           id: $$cap_app_db_pass
           description: Password for accessing the database. A random one has been generated for you.
