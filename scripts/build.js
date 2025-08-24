@@ -30,13 +30,50 @@ async function readYamlFile(filePath) {
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
+const { execSync } = require('child_process');
+const path = require('path');
 
+/**
+ * Returns a Map of {relativePath: lastCommitIsoDate}
+ * @param {string} baseDir - Directory relative to git root for filtering files (e.g., your APPS_FOLDER)
+ * @returns {Map<string, string>}  // e.g. { 'public/v4/apps/foo.yml' => '2023-06-11T19:12:44+00:00' }
+ */
+/**
+ * Returns a Map of {filename: lastCommitIsoDate}
+ * Only includes files in baseDir (absolute or relative to repo root)
+ */
+function computeGitLastChangeMap(baseDir) {
+  const path = require('path');
+  const gitLog = execSync('git log --pretty=format:"%cI" --name-only', { encoding: 'utf8' });
+  const lines = gitLog.split('\n');
+  const fileMap = new Map();
+  let date = null;
+  for (const line of lines) {
+    if (/^\d{4}-\d{2}-\d{2}T/.test(line)) {
+      date = line.trim();
+    } else if (line.trim() && date) {
+      const relPath = line.trim().replace(/\\/g, '/');
+      if (!fileMap.has(relPath)) {
+        fileMap.set(relPath, date);
+      }
+    }
+  }
+  // Filter: only files inside baseDir, return filename as key
+  const result = new Map();
+  const base = baseDir.replace(/\\/g, '/').replace(/\/$/, '');
+  for (const [file, ts] of fileMap.entries()) {
+    if (file.startsWith(base + '/')) {
+      result.set(require('path').basename(file), ts);
+    }
+  }
+  return result;
+}
 /**
  * Create an app list from the filenames of apps.
  * @param {Array<string>} appFilenames - An array of application filenames.
  * @returns {Promise<Object>} Object containing the proper app files list and details.
  */
-async function makeAppList(appFilenames) {
+async function makeAppList(appFilenames, lastChangeMap) {
   const properAppFiles = appFilenames.filter((file) => file.endsWith('.yml'));
 
   if (properAppFiles.length !== appFilenames.length) {
@@ -58,7 +95,7 @@ async function makeAppList(appFilenames) {
     if (captainVersion === '4') {
       const displayName = appData.displayName || capitalizeFirstLetter(appName);
       const description = appData.description || '';
-      const { mtime } = await fs.stat(filePath);
+      const lastModified = lastChangeMap.get(filename) || null;
 
       appDetails.push({
         name: appName,
@@ -66,7 +103,7 @@ async function makeAppList(appFilenames) {
         description: description,
         isOfficial: appData.isOfficial === 'true',
         logoUrl: `${appName}.png`,
-        lastModified: mtime.toISOString()
+        lastModified: lastModified
       });
     } else {
       throw new Error(`Whoa, an unknown captain version: ${captainVersion}`);
@@ -98,7 +135,8 @@ async function buildDist() {
 
     await fs.copy(LOGOS_FOLDER, path.join(V4_FOLDER, 'logos'));
 
-    const allAppsList = await makeAppList(appFilenames);
+    const lastChangeMap = computeGitLastChangeMap(APPS_FOLDER.replace(/\\/g, '/'));
+    const allAppsList = await makeAppList(appFilenames, lastChangeMap);
     const list = {
       oneClickApps: allAppsList.appDetails,
     };
