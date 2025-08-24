@@ -72,6 +72,8 @@ function computeGitLastChangeMap(baseDir) {
  * @returns {Promise<Object>} Object containing the proper app files list and details.
  */
 async function makeAppList(appFilenames, lastChangeMap) {
+  console.log(Array.from(lastChangeMap.keys()).slice(0, 10));
+
   const properAppFiles = appFilenames.filter((file) => file.endsWith('.yml'));
 
   if (properAppFiles.length !== appFilenames.length) {
