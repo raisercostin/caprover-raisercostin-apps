@@ -176,7 +176,8 @@ services:
         ports:
             - 3001:3000
         volumes:
-            - $$cap_appname-grafana-config:/etc/grafana
+            - $$cap_appname-grafana-config/provisioning:/etc/grafana/provisioning
+            - $$cap_appname-grafana-config/dashboards:/var/lib/grafana/dashboards
             - $$cap_appname-grafana-data:/var/lib/grafana
 
 volumes:
