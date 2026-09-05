@@ -1,0 +1,66 @@
+captainVersion: 4
+services:
+  $$cap_appname:
+    image: codeberg.org/forgejo/forgejo:$$cap_forgejo_version
+    volumes:
+      - $$cap_appname-data:/data
+    restart: always
+    environment:
+      USER_UID: '1000'
+      USER_GID: '1000'
+      RUN_MODE: prod
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__server__DOMAIN: $$cap_root_domain
+      FORGEJO__server__ROOT_URL: https://$$cap_root_domain/
+      FORGEJO__service__DISABLE_REGISTRATION: $$cap_disable_registration
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: $$cap_require_signin_view
+    caproverExtra:
+      containerHttpPort: '3000'
+caproverOneClickApp:
+  variables:
+    - id: $$cap_forgejo_version
+      label: Forgejo Version
+      defaultValue: '16'
+      description: Major version tag. Forgejo docs recommend using a major tag such as 16 for automatic patch updates.
+      validRegex: /^([^\s^\/])+$/
+    - id: $$cap_disable_registration
+      label: Disable Registration
+      defaultValue: 'true'
+      description: Set to true after creating the first admin user for a private instance.
+      validRegex: /^(true|false)$/
+    - id: $$cap_require_signin_view
+      label: Require Sign-in View
+      defaultValue: 'false'
+      description: Set to true if repositories and pages should only be visible after login.
+      validRegex: /^(true|false)$/
+  instructions:
+    start: >-
+      Forgejo is a lightweight self-hosted Git forge with repositories, issues,
+      pull requests, wiki, releases and optional Actions. This template uses
+      SQLite, so Forgejo data, repositories and database live in one persistent
+      /data volume.
+
+      Forgejo is a fork of Gitea and is the forge software used by Codeberg.
+      Choose the Forgejo version and access policy, then deploy.
+    end: >
+      Forgejo is deployed and available as $$cap_appname.
+
+      During the first web setup, keep SQLite selected unless you intentionally
+      migrate to an external database. Use `$$cap_root_domain` as the server
+      domain and `https://$$cap_root_domain/` as the root URL.
+
+      All application state is stored in the persistent `/data` volume,
+      including bare Git repositories, SQLite database, config, LFS objects,
+      attachments and avatars. Back up this volume and test a restore before
+      moving important repositories.
+
+      For HTTPS Git operations, create an access token in Forgejo and use URLs
+      like `https://$$cap_root_domain/user/repo.git`. SSH can be enabled later
+      by mapping a host port to container port 22.
+
+      IMPORTANT: It can take up to 2 minutes for Forgejo to be ready. Before
+      that, you might see a 502 error page.
+  displayName: Forgejo /SQLite
+  isOfficial: false
+  description: Forgejo is a self-hosted Git forge forked from Gitea and used by Codeberg, using SQLite in one /data volume.
+  documentation: https://forgejo.org/docs/latest/admin/installation/docker/
